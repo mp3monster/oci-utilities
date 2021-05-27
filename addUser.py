@@ -12,6 +12,8 @@ from oci.config import from_file
 # https://mytechretreat.com/how-to-use-the-oci-python-sdk-to-make-api-calls/
 # https://github.com/oracle/oci-python-sdk/blob/master/examples/quotas_example.py -- quotas example update
 # https://docs.oracle.com/en-us/iaas/Content/Search/Concepts/querysyntax.htm - search query syntax
+# https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm - setting quotas
+# https://docs.oracle.com/en-us/iaas/Content/Billing/Concepts/budgetsoverview.htm#Budgets_Overview - setting budgets
 
 config_props = None
 quota_props = None
@@ -20,8 +22,9 @@ quota_config_filename = None
 
 identity = None
 
-app_description = "automated user setup by Python SDK"
+APP_DESCRIPTION = "automated user setup by Python SDK"
     
+CONN_PROP_DEFAULT = "connection.properties"    
 TENANCY = "tenancy"
 
 USER = "users"
@@ -31,11 +34,17 @@ ALL = "all"
 NAMED="named"
 POLICY="policy"
 
+BUDGETALERTMSG="budget_alert_message"
+BUDGETALERTRECIPIENTS = "budget_alert_recipients"
+BUDGET = "budget"
+
 query_dictionary = {
   USER: {ALL : "query user resources where inactiveStatus = 0", NAMED : "query user resources where displayname = "},
   COMPARTMENT: {ALL : "query compartment resources where inactiveStatus = 0", NAMED : "query compartment resources where displayname = "},
   GROUP: {ALL : "query group resources where inactiveStatus = 0", NAMED : "query group resources where displayname = "},
-  POLICY: {ALL : "query policy resources where inactiveStatus = 0", NAMED : "query policy resources where displayname = "}
+  POLICY: {ALL : "query policy resources where inactiveStatus = 0", NAMED : "query policy resources where displayname = "},
+  BUDGET: {ALL : "query budget resources where inactiveStatus = 0", NAMED : "query budget resources where displayname = "}
+
 }
 
 QUOTA_PREFIX = "quota_"
@@ -43,8 +52,8 @@ QUOTA_PRE_LEN = len(QUOTA_PREFIX)
 
 def init_config_filename (*args):
   global config_filename, quota_config_filename
-  config_filename = "connection.properties"
-  quota_config_filename = "connection.properties"
+  config_filename = CONN_PROP_DEFAULT
+  quota_config_filename = CONN_PROP_DEFAULT
 
   for arg in sys.argv[1:]:
     arg_elements = arg.split("=")
@@ -55,6 +64,9 @@ def init_config_filename (*args):
       quota_config_filename= arg_elements[1]
       print ("quota config file >" + config_filename + "<") 
 
+def init_quota():
+  global quota_props
+  quota_props = from_file(file_location=quota_config_filename)     
 
 def init_connection():
   global config_props, identity
@@ -66,16 +78,15 @@ def get_quota_statements (compartmentname):
   global quota_props, config_props
   quota_statements = []
 
-  for config in config_props:
+  for config in quota_props:
     if (config.startswith(QUOTA_PREFIX)):
       quota_name = config[QUOTA_PRE_LEN:]
       stmt = "Set " + quota_name + " to " + config_props[config] + " in compartment " + compartmentname
       print (stmt)
       quota_statements.append(stmt)
-    else:
-      print ("ignoring " + config)
+    # else:
+      # print ("ignoring " + config)
   return quota_statements
-
 
 
 
@@ -84,7 +95,7 @@ def find(name=None, query_type=USER):
   query = query_dictionary[query_type][ALL]
   if (name != None):
     query = query_dictionary[query_type][NAMED]+"'" + name + "'"
-    print (query)
+    # print (query)
 
   search_client = oci.resource_search.ResourceSearchClient(config_props)
   structured_search = oci.resource_search.models.StructuredSearchDetails(query=query,
@@ -114,7 +125,7 @@ def create_user (username, compartment_id, email):
     request = oci.identity.models.CreateUserDetails()
     request.compartment_id = compartment_id
     request.name = username
-    request.description = app_description
+    request.description = APP_DESCRIPTION
     if ((email != None) and (len(email) > 3)):
       request.email = email
     user = identity.create_user(request)
@@ -134,12 +145,12 @@ def create_compartment (parentcompartment, compartmentname):
   compartment_id = None
   try:
     request = oci.identity.models.CreateCompartmentDetails()
-    request.description = app_description
+    request.description = APP_DESCRIPTION
     request.name = compartmentname
     request.compartment_id = parentcompartment
     compartment = identity.create_compartment(request)
-    print ("Compartment Id:" + compartment.data.id)
     compartment_id = compartment.data.id
+    print ("Compartment Id:" + compartment_id)
 
     print ("waiting on compartment state")
     client = oci.core.ComputeClient(config_props)
@@ -157,7 +168,7 @@ def create_user_compartment_policies (groupname, policyname, compartment_id, com
     manage_policy = "Allow group " + groupname +" to manage all-resources in compartment "+compartmentname
     print ("add policy: " + manage_policy)
     request = oci.identity.models.CreatePolicyDetails()
-    request.description = app_description
+    request.description = APP_DESCRIPTION
     request.name = policyname
     request.compartment_id = compartment_id
     request.statements = [manage_policy]
@@ -173,9 +184,9 @@ def create_user_compartment_policies (groupname, policyname, compartment_id, com
 def create_group (groupname):
   try:
     request = oci.identity.CreateGroupDetails()
-    request.compartment_id = config_props["tenancy"]
+    request.compartment_id = config_props[TENANCY]
     request.name = groupname
-    request.description = app_description
+    request.description = APP_DESCRIPTION
     group = identity.create_group(request)
     print("Group Id:" + group.data.id)
   except oci.exceptions.ServiceError as se:
@@ -189,15 +200,65 @@ def create_compartment_quota (quota_statements, compartment_id, quotaname):
     request = oci.limits.models.CreateQuotaDetails()
     request.compartment_id = compartment_id
     request.statements = quota_statements
-    request.description = app_description
+    request.description = APP_DESCRIPTION
     request.name = quotaname
     client = oci.limits.QuotasClient(config_props)
 
     quota = oci.limits.QuotasClient.create_quota(client,request)
+    return quota.data.id
+
   except oci.exceptions.ServiceError as se:
     print ("ERROR - Create Quota: ")
     print (se)
-  return quota.data.id
+
+
+def create_compartment_budget(budget_amount, compartment_id, budgetname, alert_recipients, alert_message):
+  # https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/budget/models/oci.budget.models.UpdateBudgetDetails.html#oci.budget.models.UpdateBudgetDetails
+  budget_id = None
+  try:
+    request = oci.budget.models.CreateBudgetDetails()
+    request.compartment_id = config_props[TENANCY]
+    request.description = APP_DESCRIPTION
+    request.display_name = budgetname
+    request.amount = budget_amount
+    request.reset_period = oci.budget.models.CreateBudgetDetails.RESET_PERIOD_MONTHLY
+    request.target_type = oci.budget.models.CreateBudgetDetails.TARGET_TYPE_COMPARTMENT
+    request.targets = [compartment_id]
+
+    client = oci.budget.BudgetClient(config_props)
+
+    budget_created = oci.budget.BudgetClient.create_budget(client, request)
+    budget_id = budget_created.data.id
+    print ("Budget rule: " + budget_id)
+    oci.wait_until(client, client.get_instance(budget_created.data.id), 'lifecycle_state', 'ACTIVE')    
+
+  except oci.exceptions.ServiceError as se:
+    print ("ERROR - Create budget: ")
+    print (se)   
+
+  try:
+    request2 = oci.budget.models.CreateAlertRuleDetails()
+    request2.display_name = budgetname+"-alert"
+    request2.description = APP_DESCRIPTION
+    request2.type = request2.TYPE_ACTUAL
+    request2.threshold_type = request2.THRESHOLD_TYPE_ABSOLUTE
+    request2.threshold = 90.0
+    request2.message = alert_message
+    request2.recipients = alert_recipients
+
+    client = oci.budget.BudgetClient(config_props)
+
+    if (budget_id == None):
+      budget_id = find(budgetname, BUDGET)
+
+    budget_alert = oci.budget.BudgetClient.create_alert_rule(client, budget_id, request2)
+    print ("Budget Alert :" + budget_alert.data.id)
+    return budget_alert.data.id
+
+  except oci.exceptions.ServiceError as se:
+    print ("ERROR - Create budget rule: ")
+    print (se)    
+
 
 def username_to_oci_compatible_name(username):
   username = username.replace(".com", "")
@@ -241,6 +302,7 @@ def main(*args):
   teamname = None
   compartmentname = None
   email_address = None
+  budget_amount = float(-1)
 
   for arg in sys.argv[1:]:
     arg_elements = arg.split("=")
@@ -254,10 +316,14 @@ def main(*args):
     elif (arg_elements[0]=="email"):
       email_address= arg_elements[1]
       print ("Email  >" + email_address + "<")
+    elif (arg_elements[0]=="budget"):
+      budget_amount= float(arg_elements[1])
+      print ("Budget  >" + budget_amount + "<")    
 
 
   init_config_filename(args)
   init_connection()
+  init_quota()
 
   username = get_username(username)
     #ToDo: add logic that says if empty string or None then throw error
@@ -266,6 +332,7 @@ def main(*args):
   compartmentname = username+"-cmt"
   policyname = username+"-pol"
   quotaname = username+"-qta"
+  budgetname = username+"-bdg"
 
   search_only = False
 
@@ -276,8 +343,7 @@ def main(*args):
   print (LOCATEDMSG + compartmentname + OCIDMSG + tostring(find(compartmentname, COMPARTMENT)))
   print (LOCATEDMSG + groupname + OCIDMSG + tostring(find(groupname, GROUP)))
   print (LOCATEDMSG + policyname + OCIDMSG + tostring(find(policyname, POLICY)))
-
-  get_quota_statements(compartmentname)
+  # print (get_quota_statements(compartmentname))
 
 
   if (search_only == False):
@@ -302,6 +368,20 @@ def main(*args):
 
     create_compartment_quota (get_quota_statements(compartmentname),config_props[TENANCY],quotaname)
 
+    if ((budget_amount == -1) and (quota_props != None)):
+      budget_amount = float(quota_props[BUDGET])
+
+    alert_message = ""
+    alert_recipients = ""
+    if (quota_props != None):
+      alert_message = quota_props[BUDGETALERTMSG] + "\n for Compartment:" + compartmentname
+      # print ("Alert message:" + alert_message)
+      alert_recipients = quota_props[BUDGETALERTRECIPIENTS]
+      # print (alert_recipients)
+    else:
+      print ("problem with quota props")
+
+    create_compartment_budget(budget_amount, compartment_ocid, budgetname, alert_recipients, alert_message)
 
 
 
