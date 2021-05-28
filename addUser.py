@@ -4,16 +4,6 @@ import sys
 import oci
 from oci.config import from_file
 
-# Useful resources for getting setup:
-# https://github.com/pyenv-win/pyenv-win#installation
-# https://realpython.com/effective-python-environment/#virtual-environments
-# https://docs.pipenv.org/en/latest/
-# https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/installation.html
-# https://mytechretreat.com/how-to-use-the-oci-python-sdk-to-make-api-calls/
-# https://github.com/oracle/oci-python-sdk/blob/master/examples/quotas_example.py -- quotas example update
-# https://docs.oracle.com/en-us/iaas/Content/Search/Concepts/querysyntax.htm - search query syntax
-# https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm - setting quotas
-# https://docs.oracle.com/en-us/iaas/Content/Billing/Concepts/budgetsoverview.htm#Budgets_Overview - setting budgets
 
 config_props = None
 quota_props = None
@@ -22,7 +12,8 @@ quota_config_filename = None
 
 identity = None
 
-APP_DESCRIPTION = "automated user setup by Python SDK"
+APP_DESCRIPTION_PREFIX = "automated user setup by Python SDK"
+APP_DESCRIPTION = APP_DESCRIPTION_PREFIX
     
 CONN_PROP_DEFAULT = "connection.properties"    
 TENANCY = "tenancy"
@@ -33,6 +24,8 @@ GROUP="group"
 ALL = "all"
 NAMED="named"
 POLICY="policy"
+ACTIONDESCRIPTION="action_desc"
+
 
 BUDGETALERTMSG="budget_alert_message"
 BUDGETALERTRECIPIENTS = "budget_alert_recipients"
@@ -261,11 +254,14 @@ def create_compartment_budget(budget_amount, compartment_id, budgetname, alert_r
 
 
 def username_to_oci_compatible_name(username):
-  username = username.replace(".com", "")
-  username = username.replace(".org", "")
-  username = username.replace("@", "-")
-  username = username.replace(".", "-")
-  username = username.replace(" ", "")
+
+  if (username != None):
+    username = username.replace(".com", "")
+    username = username.replace(".org", "")
+    username = username.replace("@", "-")
+    username = username.replace(".", "-")
+    username = username.replace(" ", "")
+    
   return username
 
 
@@ -296,6 +292,15 @@ def het_parent_compartment_ocid(teamname):
     parent_compartment_ocid = config_props[TENANCY]
   return parent_compartment_ocid
 
+def set_action_description(arg_elements):
+  actiondesc = arg_elements[1]
+  actiondesc.replace("'", "")
+  actiondesc.replace('"', "")
+  if (len (actiondesc) > 0):
+    APP_DESCRIPTION = APP_DESCRIPTION_PREFIX + " - " + arg_elements[1]
+    print ("Action description >"+APP_DESCRIPTION+"<")
+
+
 def main(*args):
   print (args)
   username = None
@@ -303,6 +308,14 @@ def main(*args):
   compartmentname = None
   email_address = None
   budget_amount = float(-1)
+
+  init_config_filename(args)
+  init_connection()
+  init_quota()
+
+  if ACTIONDESCRIPTION in config_props:
+      set_action_description([ACTIONDESCRIPTION, config_props[ACTIONDESCRIPTION]])
+
 
   for arg in sys.argv[1:]:
     arg_elements = arg.split("=")
@@ -317,14 +330,11 @@ def main(*args):
       email_address= arg_elements[1]
       print ("Email  >" + email_address + "<")
       #ToDO: do we need this ?
-    elif (arg_elements[0]=="budget"):
+    elif (arg_elements[0]==BUDGET):
       budget_amount= float(arg_elements[1])
       print ("Budget  >" + budget_amount + "<")    
-
-
-  init_config_filename(args)
-  init_connection()
-  init_quota()
+    elif (arg_elements[0]==ACTIONDESCRIPTION):
+      set_action_description(arg_elements)
 
   username = get_username(username)
     #ToDo: add logic that says if empty string or None then throw error
@@ -383,7 +393,6 @@ def main(*args):
       print ("problem with quota props")
 
     create_compartment_budget(budget_amount, compartment_ocid, budgetname, alert_recipients, alert_message)
-
 
 
 
