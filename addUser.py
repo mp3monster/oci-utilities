@@ -93,6 +93,7 @@ def init_config_filename (*args):
     elif (arg_elements[0]==QUOTACONFIGCLI):
       quota_config_filename= arg_elements[1]
       logger.info ("quota config file >" + quota_config_filename + "<") 
+##########
 
 
 def init_quota():
@@ -113,6 +114,7 @@ def init_connection():
   config_props = from_file(file_location=config_filename)     
   oci.config.validate_config(config_props)
   identity = oci.identity.IdentityClient(config_props)
+##########
 
 
 def get_quota_statements (compartmentname:str, parent_compartment:str = None):
@@ -143,6 +145,7 @@ def get_quota_statements (compartmentname:str, parent_compartment:str = None):
     else:
        logger.debug("ignoring config " + config + " not a quota property")
   return quota_statements
+##########
 
 
 
@@ -203,6 +206,7 @@ def find(name=None, query_type=USER, query_msg="", print_find = False):
     print("=========================================================")
 
   return found_id
+##########
 
 
 def create_user (username, compartment_id, email):
@@ -211,12 +215,12 @@ def create_user (username, compartment_id, email):
   This will trigger an email to the user to confirm their account
 
   **Parameters**
-  * username : xx
-  * compartmentid : xx
+  * username : the OCI friendly username
+  * compartmentid : the compartment to associate the user id to
   * email : User's email address
 
   **Returns**
-
+  the OCID for the username
   """  
   ##Todo: Need to set the IDCS side of the user up
   global logger
@@ -240,7 +244,27 @@ def create_user (username, compartment_id, email):
       logger.error (se)
 
   return user_ocid
+##########
 
+def create_idcs_user (tenancyid, idcs_name, metadata_url, metadata):
+  # https://github.com/oracle/oci-python-sdk/issues/232
+  #https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
+  global logging, config_props
+  
+  iam_client = oci.identity.IdentityClient(config_props)
+
+  idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
+  idp.compartment_id = config_props[TENANCY]
+  idp.name = 'idcs_name'
+  idp.description = 'idcs_description'
+  idp.product_type = 'IDCS'
+  idp.protocol = 'SAML2'
+  idp.metadata_url = metadata_url # The URL for retrieving the identity provider’s metadata, which contains information required for federating.
+  idp.metadata = metadata - # The XML that contains the information required for federating.
+  # load local file?? Isnt this creating trhe federation?
+
+  iam_client.create_identity_provider(idp)
+  return idp.data.id
 
 def create_compartment (parentcompartmentid, compartmentname):
   """
@@ -248,8 +272,8 @@ def create_compartment (parentcompartmentid, compartmentname):
   If parentcompartmentid is not provided then we make a top level compartment
 
   **Parameters**
-  * compartmentname : xx
-  * parentcompartmentid : xx
+  * compartmentname : the name of the compartment to create
+  * parentcompartmentid : the parent compartment if there is one. If unset 
 
   **Returns**
     The OCID for the compartment created
@@ -275,17 +299,21 @@ def create_compartment (parentcompartmentid, compartmentname):
     logger.error (se)
 
   return compartment_id
+##########
 
 
 def create_user_compartment_policies (groupname, policyname, compartmentid, compartmentname):
   """
-  Creates the XXXX
+  Creates a privileges policy for the user on the compartment. This assumes that we're
+  working with the child compartment, as the parent has more restricted policies.
+
+  ToDo: Extend so can set a more restrictive set of policies for a parent compartment
 
   **Parameters**
-  * groupname : xx
-  * policyname : xx
-  * compartmentid : xx
-  * compartmentname : xx
+  * groupname : as policies are linked to groups not individuals, we need the groupname
+  * policyname : name to use for this policy
+  * compartmentid : the compartment that this policy is linked to
+  * compartmentname : the compartment name
   **Returns**
     The OCID for policy created
   """   
@@ -310,13 +338,15 @@ def create_user_compartment_policies (groupname, policyname, compartmentid, comp
       logger.error (se)
 
   return policy_ocid
+##########
+
 
 def create_group (groupname):
   """
-  Creates the the group if the named group doesnt exist.
+  Creates the the group if the named group doesn't exist.
 
   **Parameters**
-  * groupname : xx~
+  * groupname : name of the group to create
   **Returns**
     The OCID for policy created
   """  
@@ -337,16 +367,27 @@ def create_group (groupname):
       logger.error (se)
 
   return group_ocid
+##########
 
 
-def create_compartment_quota (quota_statements, compartment_id, quotaname):
+def create_compartment_quota (quota_statements, compartmentid, quotaname):
+  """
+  Set the quota on a compartment. If the quota already exists then we return the existing quota's OCID
+
+  **Parameters**
+  * quota_statements : the statements that have been assembled from the quotas configuration source
+  * compartmentid : the OCID of the compartment to apply the quota to
+  * quotaname : name of the quota
+  **Returns**
+    The OCID for the quota definition
+  """  
   global logger
 
   quota_ocid = find(quotaname, QUOTA, "pre create quota check")
   if (quota_ocid == None):
     try:
       request = oci.limits.models.CreateQuotaDetails()
-      request.compartment_id = compartment_id
+      request.compartment_id = compartmentid
       request.statements = quota_statements
 
       logger.info ("Quota to be applied:")
@@ -364,12 +405,23 @@ def create_compartment_quota (quota_statements, compartment_id, quotaname):
       logger.error (se)
 
   return quota_ocid
+##########
 
 
-def create_compartment_budget(budget_amount, compartment_id, budgetname):
+def create_compartment_budget(budget_amount, compartmentid, budgetname):
+  """
+  XXXX
+  https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/budget/models/oci.budget.models.UpdateBudgetDetails.html#oci.budget.models.UpdateBudgetDetails
+
+  **Parameters**
+  * budget_amount : xx
+  * compartmentid : xx
+  * budgetname : xx
+  **Returns**
+    The OCID for the budget object
+  """ 
   global logger
 
-  # https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/budget/models/oci.budget.models.UpdateBudgetDetails.html#oci.budget.models.UpdateBudgetDetails
   budget_id = None
   budget_id = find(budgetname, BUDGET, "pre create budget check")
   if (budget_id == None):
@@ -381,7 +433,7 @@ def create_compartment_budget(budget_amount, compartment_id, budgetname):
       request.amount = budget_amount
       request.reset_period = oci.budget.models.CreateBudgetDetails.RESET_PERIOD_MONTHLY
       request.target_type = oci.budget.models.CreateBudgetDetails.TARGET_TYPE_COMPARTMENT
-      request.targets = [compartment_id]
+      request.targets = [compartmentid]
 
       client = oci.budget.BudgetClient(config_props)
 
@@ -395,25 +447,38 @@ def create_compartment_budget(budget_amount, compartment_id, budgetname):
       logger.error (se) 
 
   return budget_id
+##########
 
 
-def create_budget_alert(budget_id, budgetname, budgetalertname, alert_recipients, alert_message):
+def create_budget_alert(budgetid, budgetname, budgetalertname, alert_recipients, alert_message):
+  """
+  XXXX
+
+  **Parameters**
+  * budgetid : xx~
+  * budgetname : xx
+  * budgetalertname : xx
+  * alert_recipients : xx
+  * alert_message
+  **Returns**
+    The OCID for 
+  """    
   global logger
 
   logger.debug ("Entered create_budget_alert")
   try:
     budget_alert_id = None
-    if (budget_id == None):
-      budget_id = find(budgetname, BUDGET, "create_budget_alert")
+    if (budgetid == None):
+      budgetid = find(budgetname, BUDGET, "create_budget_alert")
 
-    if (budget_id == None):
+    if (budgetid == None):
       logger.error ("Failed to locate budget:" + budgetname + " no alert details will be set")
     else:
-      if isinstance(budget_id, list):
-        budget_id = budget_id[0]
+      if isinstance(budgetid, list):
+        budgetid = budgetid[0]
         logger.warning ("only assigning alert to one budget")
         
-      logger.info ("Located budget:" + budgetname + " ocid is:"+budget_id)
+      logger.info ("Located budget:" + budgetname + " ocid is:"+budgetid)
 
       request = oci.budget.models.CreateAlertRuleDetails()
       request.display_name = budgetalertname
@@ -426,7 +491,7 @@ def create_budget_alert(budget_id, budgetname, budgetalertname, alert_recipients
 
       client = oci.budget.BudgetClient(config_props)
 
-      budget_alert = oci.budget.BudgetClient.create_alert_rule(client, budget_id, request)
+      budget_alert = oci.budget.BudgetClient.create_alert_rule(client, budgetid, request)
       budget_alert_id = budget_alert.data.id
       #logger.info ("Budget Alert :" + budgetalertname + " ocid:"+ budget_alert_id)
 
@@ -438,10 +503,19 @@ def create_budget_alert(budget_id, budgetname, budgetalertname, alert_recipients
 
   logger.debug (budget_alert_id)
   return budget_alert_id
+##########
 
 
 def username_to_oci_compatible_name(username):
+  """
+  XXXX
 
+  **Parameters**
+  * username : xx
+
+  **Returns**
+    The xx
+  """  
   if (username != None):
     username = username.replace(".com", "")
     username = username.replace(".org", "")
@@ -450,17 +524,37 @@ def username_to_oci_compatible_name(username):
     username = username.replace(" ", "")
     
   return username
+##########
 
 
 def tostring (object):
+  """
+  XXXX
+
+  **Parameters**
+  * object : xx
+
+  **Returns**
+    The xx
+  """  
   result = "--- not Found ---"
 
   if (object != None):
     result = object
   
   return result
+##########
 
 def get_username(username):
+  """
+  XXXX
+
+  **Parameters**
+  * username : xx~
+
+  **Returns**
+    The username
+  """  
   username = username_to_oci_compatible_name(username)
 
   if (username == None):
@@ -468,6 +562,8 @@ def get_username(username):
     username_to_oci_compatible_name(username)
     #ToDo: add logic that says if empty string or None then throw error
   return username
+##########
+
 
 def get_parent_compartment_ocid(teamname):
   parent_compartment_ocid = None
@@ -478,8 +574,16 @@ def get_parent_compartment_ocid(teamname):
   else:
     parent_compartment_ocid = config_props[TENANCY]
   return parent_compartment_ocid
+##########
 
 def set_action_description(arg_elements):
+  """
+  XXXX
+
+  **Parameters**
+  * arg_elements : xx~
+
+  """    
   global logger
 
   actiondesc = arg_elements[1]
@@ -488,9 +592,18 @@ def set_action_description(arg_elements):
   if (len (actiondesc) > 0):
     APP_DESCRIPTION = APP_DESCRIPTION_PREFIX + " - " + arg_elements[1]
     logger.debug ("Action description >"+APP_DESCRIPTION+"<")
-
+##########
 
 def get_budget_amount (budget_amt_obj):
+  """
+  XXXX
+
+  **Parameters**
+  * budget_amt_obj : xx~
+
+  **Returns**
+    The budget amount
+  """    
   global logger
   budget_amount = float(-1)
   if (budget_amt_obj != None):
@@ -499,9 +612,45 @@ def get_budget_amount (budget_amt_obj):
     except ValueError as ve:
       logger.error ("Error converting budget amount to a numeric", ve)
   return budget_amount
+##########
+
+def delete(compartmentid, username=None, compartmentname=None, groupname=None, policyname=None):
+  # https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/identity/models/oci.identity.models.BulkDeleteResourcesDetails.html
+  request = oci.identity.models.BulkDeleteResourcesDetails()
+  delete_list = []
+
+  if (username != None):
+    ocid = (find(username, USER))
+    if (ocid != None):
+      delete_list.append(ocid)
+
+  if (compartmentname != None):
+    ocid = (find(compartmentname, COMPARTMENT))
+    if (ocid != None):
+      delete_list.append(ocid)
+
+  if (groupname != None):
+    ocid = (find(groupname, GROUP))
+    if (ocid != None):
+      delete_list.append(ocid)
+
+  if (policyname != None):
+    ocid = (find(policyname, POLICY))
+    if (ocid != None):
+      delete_list.append(ocid)
+
+    client = oci.core.IdentityClient(config_props)
+    client.bulk_delete_resources(compartmentid, delete_list)
 
 
 def main(*args):
+  """
+  XXXX
+
+  **Parameters**
+  * args : xx~
+
+  """  
   global logger
   print (args)
 
@@ -618,6 +767,9 @@ def main(*args):
   logger.info (LOCATEDMSG + groupname + OCIDMSG + tostring(find(groupname, GROUP)))
   logger.info (LOCATEDMSG + policyname + OCIDMSG + tostring(find(policyname, POLICY)))
 
+  if delete:
+    delete ()
+    exit
 
   if (search_only == False):
 
