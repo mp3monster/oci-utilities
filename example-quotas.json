@@ -1,0 +1,406 @@
+{"budget_definition" : {"amount": 10.0, "name":"personal_budget"},
+  "quota_definition":{"quota_name": "personal_quota"},
+  "quotas": [
+    {
+    "description" : "digital assistant",
+    "comment": "Only allow digital assistant in a shared team compartment",
+    "deployment_grouping": "team",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/digital-assistant/doc/order-service-and-provision-instance.html#GUID-55E5C9AA-B907-4B12-A017-43F56AD62879",
+    "family_name" : "digital-assistant",
+    "quota": [{"quota_name" : "instance-count", "value" : 1, "apply":true}]
+  },
+  {
+    "description" : "analytics",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/analytics-cloud/doc/get-started.html#ACOCI-GUID-01F967EA-D371-4873-BF06-65A0A9D00B90",
+    "family_name" : "analytics",
+    "quota": [{"quota_name" : "se-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "se-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "se-user-count", "value" : 0, "apply":true},
+      {"quota_name" : "ee-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "ee-user-count", "value" : 0, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Big Data",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/big-data/doc/get-started-oracle-big-data-service.html#GUID-4C882FA2-F9FB-41B3-872E-3E7E411F63BB__SERVICE-QUOTAS",
+    "family_name" : "big-data",
+    "quota": [{"quota_name" : "vm-standard-2-1-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-standard-2-2-ocpu-count", "value" : 2, "apply":true},
+      {"quota_name" : "vm-standard-2-4-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-standard-2-8-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-standard-2-16-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-standard-2-24-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-dense-io-2-8-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-dense-io-2-16-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "vm-dense-io-2-24-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "bm-hpc2-36-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "bm-dense-io-2-52-ocpu-count", "value" : 0, "apply":true},
+      {"quota_name" : "bm-standard-2-52-ocpu-count", "value" : 0, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Block Volume",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "block-storage",
+    "quota": [{"quota_name" : "backup-count", "value" : 10, "apply":true},
+      {"quota_name" : "total-storage-gb", "value" : 1000, "apply":true},
+      {"quota_name" : "volume-count", "value" : 20, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Blockchain",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/blockchain-platform/doc/getting-started.html#GUID-AF80D473-781A-44D6-9AE2-A9A250056026",
+    "family_name" : "blockchain",
+    "quota": [{"quota_name" : "platform-count", "value" : 0, "apply":true}]
+  },  
+  {
+    "description" : "Compute Instances",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "compute-core",
+    "quota": [
+      {"quota_name" : "standard1-core-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard-b1-core-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard2-core-count", "value" : 3, "apply":true},
+      {"quota_name" : "standard-e2-micro-core-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard-e2-core-count", "value" : 3, "apply":true},
+      {"quota_name" : "standard-e3-core-ad-count", "value" : 0, "apply":true},
+      {"quota_name" : "standard-e4-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "standard-a1-core-count", "value" : 24, "apply":true},
+      {"quota_name" : "dense-io1-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "dense-io2-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "gpu2-count", "value" : 3, "apply":true},
+      {"quota_name" : "gpu3-count", "value" : 0, "apply":true},
+      {"quota_name" : "gpu4-count", "value" : 0, "apply":true},
+      {"quota_name" : "hpc2-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "optimized3-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "dvh-standard2-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "dvh-standard-e2-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "dvh-standard-e3-core-count", "value" : 0, "apply":true},
+      {"quota_name" : "dvh-dense-io2-core-count", "value" : 0, "apply":true},
+
+      {"quota_name" : "standard1-core-reserved-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard-b1-core-reserved-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard2-core-reserved-count", "value" : 6, "apply":true},
+      {"quota_name" : "standard-e2-core-reserved-count", "value" : 2, "apply":true},
+      {"quota_name" : "standard-e3-core-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "standard-e4-core-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "standard-a1-core-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "dense-io1-core-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "dense-io2-core-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "gpu2-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "gpu3-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "gpu4-reserved-count", "value" : 0, "apply":true},
+      {"quota_name" : "hpc2-core-reserved-count", "value" : 0, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Custom Images",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "compute",
+    "quota": [{"quota_name" : "custom-image-count", "value" : 10, "apply":true}]
+  },  
+  {
+    "description" : "Compute Management",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "compute-management ",
+    "quota": [{"quota_name" : "cluster-network-count", "value" : 10, "apply":true},
+      {"quota_name" : "config-count", "value" : 10, "apply":true},
+      {"quota_name" : "pool-count", "value" : 10, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Autoscaling",
+    "comment": "apply set to false as we are bounding by the number of OCPUs",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "auto-scaling",
+    "quota": [{"quota_name" : "config-count", "value" : 5, "apply":false}]
+  },
+  {
+    "description" : "Content and Experience",
+    "comment": "We only want share team compartments to have OCE",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "oce",
+    "quota": [{"quota_name" : "oce-instance-count", "value" : 0, "apply":true}]
+  },  
+  {
+    "description" : "Data Catalog",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "data-catalog",
+    "quota": [{"quota_name" : "catalog-count", "value" : 3, "apply":true}]
+  },
+
+  {
+    "description" : "Data Integration",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "dataintegration",
+    "quota": [{"quota_name" : "workspace-count", "value" : 3, "apply":true}]
+  },  
+
+  {
+    "description" : "Data Science",
+    "comment": "use at a team level",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "data-science",
+    "quota": [{"quota_name" : "ds-block-volume-count", "value" : 0, "apply":true},
+      {"quota_name" : "ds-block-volume-gb", "value" : 0, "apply":true},
+      {"quota_name" : "ds-gpu2-count", "value" : 0, "apply":true},
+      {"quota_name" : "ds-gpu3-count", "value" : 0, "apply":true},
+      {"quota_name" : "ds-standard2-core-regional-count", "value" : 0, "apply":true},
+      {"quota_name" : "ds-standard-e2-core-regional-count", "value" : 0, "apply":true},
+      {"quota_name" : "ds-standard-e3-core-regional-count", "value" : 0, "apply":true},
+      {"quota_name" : "model-count", "value" : 0, "apply":true},
+      {"quota_name" : "notebook-session-count", "value" : 0, "apply":true},
+      {"quota_name" : " project-count", "value" : 0, "apply":true}
+    ]
+  },  
+
+  {
+    "description" : "Data Transfer",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "data-transfer",
+    "quota": [{"quota_name" : "active-appliance-count", "value" : 0, "apply":true},
+      {"quota_name" : "appliance-count", "value" : 0, "apply":true},
+      {"quota_name" : "job-count", "value" : 0, "apply":false}
+    ]
+  }, 
+
+    {
+    "description" : "Database",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "database",
+    "quota": [{"quota_name" : "adb-free-count", "value" : 2, "apply":true},
+              {"quota_name" : "adw-dedicated-ocpu-count", "value" : 2, "apply":true},
+              {"quota_name" : "adw-dedicated-total-storage-tb", "value" : 1, "apply":true},
+              {"quota_name" : "adw-ocpu-count", "value" : 2, "apply":true},
+              {"quota_name" : "adw-total-storage-tb", "value" : 1, "apply":true},
+              {"quota_name" : "atp-dedicated-ocpu-count", "value" : 2, "apply":true},
+              {"quota_name" : "atp-dedicated-total-storage-tb", "value" : 1, "apply":true},
+              {"quota_name" : "atp-ocpu-count", "value" : 2, "apply":true},
+              {"quota_name" : "atp-total-storage-tb", "value" : 2, "apply":true},	
+              {"quota_name" : "bm-dense-io1-36-count", "value" : 0, "apply":true},	
+              {"quota_name" : "bm-dense-io2-52-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-base-48-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-full1-336-x6-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-full2-368-x7-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-half1-168-x6-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-half2-184-x7-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-quarter1-84-x6-count", "value" : 0, "apply":true},	
+              {"quota_name" : "exadata-quarter2-92-x7-count", "value" : 0, "apply":true},	
+              {"quota_name" : "vm-block-storage-gb", "value" : 1000, "apply":true},	
+              {"quota_name" : "vm-standard1-ocpu-count", "value" : 6, "apply":true},	
+              {"quota_name" : "vm-standard2-ocpu-count", "value" : 3, "apply":true}
+    ]
+  },  
+  {
+    "description" : "Database Migration",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "odms",
+    "quota": [{"quota_name" : "odms-migration-count", "value" : 0, "apply":true},
+              {"quota_name" : "odms-registered-database-count", "value" : 0, "apply":true},
+              {"quota_name" : "odms-agent-count", "value" : 0, "apply":true}
+    ]
+  }, 
+
+  {
+    "description" : "DNS",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "dns",
+    "quota": [{"quota_name" : "global-zone-count", "value" : 0, "apply":false},
+      {"quota_name" : "steering-policy-count", "value" : 0, "apply":false},
+      {"quota_name" : "steering-policy-attachment-count", "value" : 0, "apply":false}
+    ]
+  },   
+  {
+    "description" : "Event",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "events",
+    "quota": [{"quota_name" : "rule-count", "value" : 0, "apply":false}]
+  }, 
+  {
+    "description" : "Email Delivery",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "email-delivery",
+    "quota": [{"quota_name" : "approved-sender-count", "value" : 10, "apply":true}]
+  }, 
+  {
+    "description" : "File Storage",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "filesystem",
+    "quota": [{"quota_name" : "mount-target-count", "value" : 0, "apply":true},
+      {"quota_name" : "file-system-count", "value" : 0, "apply":true}]
+  }, 
+
+  {
+    "description" : "GoldenGate",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "goldengate",
+    "quota": [{"quota_name" : "deployment-count", "value" : 0, "apply":true},
+      {"quota_name" : "database-registration-count", "value" : 0, "apply":false}
+    ]
+  }, 
+  {
+    "description" : "Java Management",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "java-management",
+    "quota": [{"quota_name" : "fleet-count", "value" : 10, "apply":true}]
+  },
+  {
+    "description" : "Load Balancer",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "load-balancer",
+    "quota": [{"quota_name" : "lb-10mbps-micro-count", "value" : 12, "apply":true},
+      {"quota_name" : "lb-10mbps-count", "value" : 0, "apply":true},
+      {"quota_name" : "lb-100mbps-count", "value" : 0, "apply":true},
+      {"quota_name" : "lb-400mbps-count", "value" : 0, "apply":true},
+      {"quota_name" : "lb-8000mbps-count", "value" : 0, "apply":true}
+    ]
+  }, 
+  {
+    "description" : "Management Agents",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "management-agent",
+    "quota": [{"quota_name" : "management-agent-count", "value" : 10, "apply":true},
+      {"quota_name" : "management-agent-install-key-count", "value" : 10, "apply":true}
+    ]
+  }, 
+  {
+    "description" : "VCN",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "vcn",
+    "quota": [{"quota_name" : "vcn-count", "value" : 12, "apply":true},
+      {"quota_name" : "reserved-public-ip-count", "value" : 3, "apply":true}
+    ]
+  },
+  {
+    "description" : "No SQL Database",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/nosql-database/doc/nosql-database-cloud.html#CSNSD-GUID-3E4841DC-BE9B-4527-9207-144E8043A053",
+    "family_name" : "nosql",
+    "quota": [{"quota_name" : "read-unit-count", "value" : 1000, "apply":true},
+      {"quota_name" : "write-unit-count", "value" : 1000, "apply":true},
+      {"quota_name" : "table-size-gb", "value" : 100, "apply":true}
+    ]
+  }, 
+
+  {
+    "description" : "Notifications",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "notifications",
+    "quota": [{"quota_name" : "topic-count", "value" : 10, "apply":true}
+    ]
+  }, 
+  {
+    "description" : "Object Storage",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "object-storage",
+    "quota": [{"quota_name" : "storage-bytes", "value" : 10000, "apply":true}
+    ]
+  }, 
+
+  {
+    "description" : "Resource Manager",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "resource-manager",
+    "quota": [{"quota_name" : "concurrent-job-count", "value" : 0, "apply":false},
+      {"quota_name" : "configuration-source-provider-count", "value" : 0, "apply":false},
+      {"quota_name" : "stack-count", "value" : 0, "apply":false},
+      {"quota_name" : "template-count", "value" : 0, "apply":false}
+    ]
+  }, 
+  {
+    "description" : "Service Connector Hub",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "service-connector-hub",
+    "quota": [{"quota_name" : "service-connector-count", "value" : 5, "apply":false} ]
+  }, 
+  {
+    "description" : "Streaming",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "streaming",
+    "quota": [{"quota_name" : "partition-count", "value" : 6, "apply":true} ]
+  }, 
+  {
+    "description" : "Vault",
+    "comment": "Should be used as a shared resource",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "kms",
+    "quota": [{"quota_name" : "virtual-private-vault-count", "value" : 0, "apply":true} ]
+  }, 
+  {
+    "description" : "Vulnerability Scanning",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "vulnerability-scanning",
+    "quota": [{"quota_name" : "recipe-count", "value" : 0, "apply":false},
+      {"quota_name" : "target-count", "value" : 0, "apply":false}
+    ]
+  }, 
+
+  {
+    "description" : "Web Application Firewall",
+    "comment": "",
+    "deployment_grouping": "individual",
+    "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
+    "family_name" : "waas",
+    "quota": [{"quota_name" : "waas-policy-count", "value" : 50, "apply":true} ]
+  } 
+  ]
+}
