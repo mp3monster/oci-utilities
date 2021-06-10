@@ -5,6 +5,7 @@ import oci
 from oci.config import from_file
 import logging
 import logging.config
+import json
 
 config_props = None
 """Holds the configuration properties loaded. This configuration needs to 
@@ -24,12 +25,14 @@ quota_config_filename = None
 logger : logging.Logger
 """Python logger used within this module"""
 
-identity = None
+Identity = None
 
 APP_DESCRIPTION_PREFIX = "automated user setup by Python SDK"
 APP_DESCRIPTION = APP_DESCRIPTION_PREFIX
     
 CONN_PROP_DEFAULT = "connection.properties"
+QUOTA_PROP_DEFAULT = "quotas.json"
+
 LOGGER_CONF_DEFAULT= "logging.properties"
 TENANCY = "tenancy"
 
@@ -47,13 +50,15 @@ TEAMNAME="team"
 QUOTA="quota"
 QUOTANAME = "quotaname"
 BUDGETNAME= "budgetname"
+LIST="listquota"
+VALIDATE_QUOTA="validate"
 
 CONFIGCLI="config"
 QUOTACONFIGCLI="quotaconfig"
 """The CLI names used to specify the locations of the config files"""
 
-BUDGETALERTMSG="budget_alert_message"
-BUDGETALERTRECIPIENTS = "budget_alert_recipients"
+BUDGETALERTMSG="alert_message"
+BUDGETALERTRECIPIENTS = "alert_recipients"
 BUDGET = "budget"
 BUDGETAMT = "budgetamount"
 
@@ -83,7 +88,7 @@ def init_config_filename (*args):
     """
   global config_filename, quota_config_filename, logger
   config_filename = CONN_PROP_DEFAULT
-  quota_config_filename = CONN_PROP_DEFAULT
+  quota_config_filename = QUOTA_PROP_DEFAULT
 
   for arg in sys.argv[1:]:
     arg_elements = arg.split("=")
@@ -95,25 +100,120 @@ def init_config_filename (*args):
       logger.info ("quota config file >" + quota_config_filename + "<") 
 ##########
 
+def validate_quota_config(check_minor_attributes=False):
+  global logger, quota_props
+
+  logger.debug("Validating Quota file")
+  err_count = 0
+  warning_count = 0
+  minor_warning_count = 0
+  unused_count=0
+
+  family_count = 1
+  family_desc = ""
+  quota_name = ""
+  try:
+    for quota_family in quota_props["quotas"]:
+      if ("description" in quota_family):
+        family_desc = quota_family["description"]
+      else:
+        family_desc = "--Not Defined--"
+      if ("description" not in quota_family) or (len(quota_family["description"]) < 3):
+        logger.warning ("Quota description on " + family_desc + "( family group " + str(family_count) + ") is incomplete")
+        warning_count+=1
+      if ("family_name" not in quota_family) or (len(quota_family["family_name"]) < 3):
+        logger.warning ("Quota Family Name on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+        warning_count+=1
+      if ("quota" not in quota_family) or (len(quota_family["quota"]) == 0):
+        logger.warning ("No individual quotas set on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+        warning_count+=1
+      if (check_minor_attributes):
+        if ("documentation_url" not in quota_family) or (len(quota_family["documentation_url"]) < 9):
+          logger.warning ("Documentation_url on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+          minor_warning_count+=1
+        if ("comment" not in quota_family) or (len(quota_family["comment"]) < 1):
+          logger.warning ("Documentation_url on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+          minor_warning_count+=1
+
+      else:
+        quota_count=1
+        for quota in quota_family["quota"]:
+          try:
+            quota_name = quota["quota_name"]
+            if ("quota_name" not in quota):
+              logger.warning ("Quota name in family " + str(family_count) + " is missing")
+              quota_name = "--Not Defined--"
+              warning_count+=1
+            else:
+              if (len(quota["quota_name"] ) < 3):
+                logger.warning ("Quota name in family " + str(family_count) + " is incomplete")
+                warning_count+=1                  
+            if ("value" not in quota) or (quota["value"] < 0):  
+              msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+              logger.warning (msg + " -- value not correct")
+              warning_count+=1
+            if ("apply" not in quota): 
+              msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+              logger.warning (msg + " -- apply to specified")  
+              warning_count+=1
+            else:
+              if (quota["apply"] == False):  
+                msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+                logger.warning (msg + " -- value wont be used")        
+                unused_count+=1               
+          
+          except Exception as err:
+            msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count) + " errored"
+            logger.error(msg, err)
+            err_count+=1
+          quota_count+=1
+      family_count += 1
+  except Exception as err:
+    logger.error(err)
+    err_count+=1
+
+  if (err_count > 0):
+    logger.warning ("Total of " + str(err_count) + " errors found")
+  else:
+    logger.info ("Total of " + str(err_count) + " errors found")
+  if (warning_count > 0):
+    logger.warning ("Total of " + str(warning_count) + " warnings found")
+  else:
+    logger.info ("Total of " + str(warning_count) + " warnings found")
+  if (minor_warning_count > 0):
+    logger.warning ("Total of " + str(minor_warning_count) + " minor warnings found")
+  else:
+    logger.info ("Total of " + str(minor_warning_count) + " minor warnings found")
+
+  logger.info ("Total of " + str(unused_count) + " individual quotes not to be used")
+
+##########         
 
 def init_quota():
   """
   Using the provided filename load the quota file into a properties structure
     
   """
-  global quota_props
-  quota_props = from_file(file_location=quota_config_filename)     
+  global quota_props, logger
 
+  logger.debug("Quota file:"+quota_config_filename)
+  file = open(quota_config_filename,"r")
+
+  quota_props = json.load(file)
+  file.close()
+
+ ##########
+ 
 def init_connection():
   """
   Using the provided filename load the configuration file with all the values
   needed by the Python SDK to connect to OCI
     
   """
-  global config_props, identity
+  global config_props, Identity
   config_props = from_file(file_location=config_filename)     
   oci.config.validate_config(config_props)
-  identity = oci.identity.IdentityClient(config_props)
+  Identity = oci.identity.IdentityClient(config_props)
 ##########
 
 
@@ -132,18 +232,26 @@ def get_quota_statements (compartmentname:str, parent_compartment:str = None):
   global quota_props, config_props, logger
   quota_statements = []
 
-  for config in quota_props:
-    if (config.startswith(QUOTA_PREFIX)):
-      quota_name = config[QUOTA_PRE_LEN:]
-      compartment = compartmentname
-      if (parent_compartment != None) and (len(parent_compartment) > 0):
-        compartment = parent_compartment+":"+compartment
+  # sort out which compartment
+  if (parent_compartment != None) and (len(parent_compartment) > 0):
+    compartment = parent_compartment+":"+compartment
 
-      stmt = "Set " + quota_name + " to " + config_props[config] + " in compartment " + compartment
-      logger.info (stmt)
-      quota_statements.append(stmt)
-    else:
-       logger.debug("ignoring config " + config + " not a quota property")
+  if ("quotas" in quota_props):
+    for quota_family in quota_props["quotas"]:
+      if ("quota" in quota_family):
+        for quota in quota_family["quota"]:
+          if ("apply" not in quota) and ("family_name" not in quota_family) and ("quota_name" not in quota) and ("value" not in quota_family):
+            logger.error ("Missing data in the quotas configuration")
+          else:
+            if (quota["apply"]):
+              stmt = "Set " + quota_family["family_name"] + " quota " + quota["quota_name"] + " to " + quota_family["value"] + " in compartment " + compartment
+              logger.debug (stmt)
+              quota_statements.append(stmt)
+      else:
+        logger.warning ("No individual quotas")
+  else:
+    logger.warning ("No quotas in quota config")
+
   return quota_statements
 ##########
 
@@ -235,7 +343,7 @@ def create_user (username, compartment_id, email):
       if ((email != None) and (len(email) > 3)):
         request.email = email
         logger.debug ("request.email set")
-      user = identity.create_user(request)
+      user = Identity.create_user(request)
       user_id = user.data.id
 
       logger.info("User Name :"+ username + "; email:"+ email +";User Id:" + user_id)
@@ -248,9 +356,10 @@ def create_user (username, compartment_id, email):
 
 def create_idcs_user (tenancyid, idcs_name, metadata_url, metadata):
   # https://github.com/oracle/oci-python-sdk/issues/232
-  #https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
+  # https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
   global logging, config_props
   
+  return None
   iam_client = oci.identity.IdentityClient(config_props)
 
   idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
@@ -260,11 +369,16 @@ def create_idcs_user (tenancyid, idcs_name, metadata_url, metadata):
   idp.product_type = 'IDCS'
   idp.protocol = 'SAML2'
   idp.metadata_url = metadata_url # The URL for retrieving the identity provider’s metadata, which contains information required for federating.
-  idp.metadata = metadata - # The XML that contains the information required for federating.
+  idp.metadata = metadata
+  # The XML that contains the information required for federating.
   # load local file?? Isnt this creating trhe federation?
 
   iam_client.create_identity_provider(idp)
   return idp.data.id
+
+##########
+
+
 
 def create_compartment (parentcompartmentid, compartmentname):
   """
@@ -286,13 +400,13 @@ def create_compartment (parentcompartmentid, compartmentname):
     request.description = APP_DESCRIPTION
     request.name = compartmentname
     request.compartment_id = parentcompartmentid
-    compartment = identity.create_compartment(request)
+    compartment = Identity.create_compartment(request)
     compartment_id = compartment.data.id
     logger.info ("Compartment Id:" + compartment_id)
 
     logger.info ("waiting on compartment state")
-    client = oci.core.IdentityClient(config_props)
-    oci.wait_until(client, client.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE')    
+    #client = oci.core.IdentityClient(config_props)
+    oci.wait_until(Identity, Identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE')    
    
   except oci.exceptions.ServiceError as se:
     logger.error ("ERROR - Create Compartment: "+compartmentname + " child of " + parentcompartmentid)
@@ -331,7 +445,7 @@ def create_user_compartment_policies (groupname, policyname, compartmentid, comp
       request.compartment_id = compartmentid
       request.statements = [manage_policy]
 
-      policy = identity.create_policy(request)
+      policy = Identity.create_policy(request)
       policy_ocid = policy.data.id
     except oci.exceptions.ServiceError as se:
       logger.error ("ERROR - Create Policies: " + policyname +" group is"+groupname+ " in " +compartmentname)
@@ -359,7 +473,7 @@ def create_group (groupname):
       request.compartment_id = config_props[TENANCY]
       request.name = groupname
       request.description = APP_DESCRIPTION
-      group = identity.create_group(request)
+      group = Identity.create_group(request)
       group_ocid = group.data.id
       logger.info("Group Id:" + group.data.id)
     except oci.exceptions.ServiceError as se:
@@ -594,25 +708,81 @@ def set_action_description(arg_elements):
     logger.debug ("Action description >"+APP_DESCRIPTION+"<")
 ##########
 
-def get_budget_amount (budget_amt_obj):
+def get_budget_amount (budget_amount_override=None):
   """
   XXXX
-
-  **Parameters**
-  * budget_amt_obj : xx~
 
   **Returns**
     The budget amount
   """    
-  global logger
-  budget_amount = float(-1)
-  if (budget_amt_obj != None):
-    try:
-      budget_amount = float(budget_amt_obj)
-    except ValueError as ve:
-      logger.error ("Error converting budget amount to a numeric", ve)
+  global logger, quota_props
+  budget_amount = float(0)
+  try:
+    if (budget_amount_override != None):
+      if (isinstance(budget_amount_override, str)):
+        budget_amount_override = budget_amount_override.strip()
+        if (len(budget_amount_override) > 0):
+          budget_amount = float(budget_amount_override)
+      elif (isinstance(budget_amount_override, float)):
+        budget_amount = budget_amount_override
+  except ValueError as ve:
+    logger.error ("Error converting budget amount to a numeric", ve)
+    
+  if (budget_amount == 0) and (quota_props != None):
+    budget = None
+    if ("budget_definition" in quota_props):
+      budget = quota_props["budget_definition"]
+      if ("amount" in budget):
+        budget_amount = budget["amount"]
+        
+
   return budget_amount
 ##########
+
+def get_definition_name (definition_type, override=None):
+  """
+  XXXX
+
+  **Returns**
+    The budget amount
+  """    
+  global logger, quota_props
+  name=""
+  try:
+    if (override != None):
+      if (isinstance(override, str)):
+        budget_amount_override = budget_amount_override.strip()
+        if (len(budget_amount_override) > 0):
+          budget_amount = float(budget_amount_override)
+
+  except ValueError as ve:
+    logger.error ("Error converting budget amount to a numeric", ve)
+    
+  if (name == "") and (quota_props != None):
+    if (definition_type in quota_props):
+      container = quota_props[definition_type]
+      if ("name" in container):
+        name = container["name"]
+
+  return name
+##########
+
+def list_quotas ():
+  global logger
+  
+  limits_client = oci.limits.QuotasClient(config_props)
+
+  list_quotas_response = limits_client.list_quotas(
+    compartment_id=config_props[TENANCY],
+    limit=1000,
+    #lifecycle_state="ACTIVE"
+    )
+
+  # Get the data from response
+  print(list_quotas_response.data)
+
+##########
+
 
 def delete(compartmentid, username=None, compartmentname=None, groupname=None, policyname=None):
   # https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/identity/models/oci.identity.models.BulkDeleteResourcesDetails.html
@@ -662,22 +832,21 @@ def main(*args):
 
   init_config_filename(args)
   init_connection()
-  init_quota()
+
+  budget_amount = float(-1)
+
 
   username = config_props.get(USER)
   teamname = config_props.get(TEAMNAME)
   email_address = config_props.get(EMAIL)
-  quotaname = config_props.get(QUOTANAME)
-  budgetname = config_props.get(BUDGETNAME)
-
-
-  budget_amount = float(-1)
-  if (quota_props != None):
-    budget_amount = get_budget_amount(config_props.get(BUDGETAMT))
+  quotaname = None
+  budgetname = None
 
 
   delete = False
-  DELOPTIONS = ["Y", "YES", "T", "TRUE"]
+  list_quota=False
+  validate_quota=False
+  OPTIONS = ["Y", "YES", "T", "TRUE"]
   CLIMSG = "CLI set "
 
   if ACTIONDESCRIPTION in config_props:
@@ -724,14 +893,38 @@ def main(*args):
       logger = logging.getLogger()
 
     elif (arg_elements[0]==DELETE):
-      if (arg_elements[1].upper() in DELOPTIONS):
+      if (arg_elements[1].upper() in OPTIONS):
         delete = True
+        logger.warning(DELETE + "option not available")
+
+    elif (arg_elements[0]==VALIDATE_QUOTA):
+      if (arg_elements[1].upper() in OPTIONS):
+        validate_quota = True
+
+    elif (arg_elements[0]==LIST):
+      if (arg_elements[1].upper() in OPTIONS):
+        list_quota = True
         logger.warning(DELETE + "option not available")
 
     elif (arg_elements[0]==CONFIGCLI or arg_elements[0]==QUOTACONFIGCLI):
       logger.debug ("processed " + arg + " separately")
     else:
         logger.warning(arg_elements[0] + " Unknown config, original value="+arg)
+
+
+  init_quota()
+  if (validate_quota):
+    validate_quota_config()
+    exit(0)
+
+  quotaname = get_definition_name("quota_definition", quotaname)
+  budgetname = get_definition_name("budget_definition", budgetname)
+
+  if (list_quota):
+    list_quotas()
+    exit(0)
+
+  budget_amount = get_budget_amount(budget_amount)
 
   if (email_address ==None):
     email_address = username
@@ -744,6 +937,7 @@ def main(*args):
   groupname = username+"-grp"
   compartmentname = username+"-cmt"
   policyname = username+"-pol"
+
 
   if (quotaname == None) or (len(quotaname) < 5):
     quotaname = username+"-qta"
@@ -767,10 +961,6 @@ def main(*args):
   logger.info (LOCATEDMSG + groupname + OCIDMSG + tostring(find(groupname, GROUP)))
   logger.info (LOCATEDMSG + policyname + OCIDMSG + tostring(find(policyname, POLICY)))
 
-  if delete:
-    delete ()
-    exit
-
   if (search_only == False):
 
     parent_compartment_ocid = get_parent_compartment_ocid(teamname)
@@ -790,7 +980,7 @@ def main(*args):
     policyname_ocid = create_user_compartment_policies (groupname, policyname, compartment_ocid, compartmentname)
     logger.info (policyname + OCIDMSG + tostring(policyname_ocid))
 
-    if (quota_props != None):
+    if (config_props != None):
       alert_message = ""
       alert_recipients = ""
       if (parent_compartment_ocid != None):
@@ -799,10 +989,19 @@ def main(*args):
         quota_ocid = create_compartment_quota (get_quota_statements(compartmentname),config_props[TENANCY],quotaname)
       logger.info (quotaname + OCIDMSG + tostring(quota_ocid))
 
-      alert_message = quota_props[BUDGETALERTMSG] + "\n for Compartment:" + compartmentname
-      logger.debug ("Alert message:" + alert_message)
-      alert_recipients = quota_props[BUDGETALERTRECIPIENTS]
-      logger.debug ("Alert recipients:" + alert_recipients)
+      try:
+        alert_message = quota_props["budget_definition"][BUDGETALERTMSG] + " for Compartment:" + compartmentname
+        logger.debug ("Alert message:" + alert_message)
+      except Exception as err:
+        logger.error (err)
+        alert_message = "alert"
+
+      try:
+        alert_recipients = quota_props["budget_definition"][BUDGETALERTRECIPIENTS]
+        logger.debug ("Alert recipients:" + alert_recipients)
+      except Exception as err:
+        logger.error (err)
+        alert_recipients = "alert"
 
       budget_ocid = create_compartment_budget(budget_amount, compartment_ocid, budgetname)
       logger.info (CREATEDMSG + budgetname + OCIDMSG + tostring(budget_ocid))
