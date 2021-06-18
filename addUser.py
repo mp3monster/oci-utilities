@@ -30,6 +30,7 @@ class QUOTA_CONST:
   BUDGET_ALERT="create_budget_alert"
   QTA_DEF="quota_definition"
   BGT_DEF="budget_definition"
+  BUDGETALERTRECIPIENTS="alert_recipients"
 ##########
 
 class CONFIG_CONST:
@@ -297,7 +298,7 @@ def init_connection():
   oci.config.validate_config(config_props)
 ##########
 
-def get_quota_statements_for_family(quota_family, quota_statements, compartment):
+def get_quota_statements_for_family(quota_family, quota_statements : [], compartment:str):
   """Processes each family to construct the relevant quota statements
 
   Args:
@@ -309,6 +310,7 @@ def get_quota_statements_for_family(quota_family, quota_statements, compartment)
       str[]: The updated quota_statements construct
   """
   global logger
+
   if (QUOTA_CONST.QUOTA in quota_family):
         for quota in quota_family[QUOTA_CONST.QUOTA]:
           if ((QUOTA_CONST.QTA_APPLY not in quota) and (QUOTA_CONST.FAMILY not in quota_family) and 
@@ -316,10 +318,14 @@ def get_quota_statements_for_family(quota_family, quota_statements, compartment)
             logger.error ("Missing data in the quotas configuration")
           else:
             if (quota[QUOTA_CONST.QTA_APPLY]):
-              stmt = ("Set " + quota_family[QUOTA_CONST.FAMILY] + 
-                      " quota " + quota[QUOTA_CONST.QTA_NAME] + " to " + 
-                      quota_family[QUOTA_CONST.QTA_VALUE] + " in compartment " + compartment)
-              logger.debug (stmt)
+              
+              logger.info(quota_family[QUOTA_CONST.FAMILY]+"."+ quota[QUOTA_CONST.QTA_NAME])
+              quota_value_str = str(quota[QUOTA_CONST.QTA_VALUE])
+
+              str_no_stmts = str(len(quota_statements)+1)
+              stmt = ("Set " + quota_family[QUOTA_CONST.FAMILY] + " quota " + quota[QUOTA_CONST.QTA_NAME] + " to " + quota_value_str + " in compartment " + compartment)
+                      
+              logger.debug (str_no_stmts+ ":"+stmt)
               quota_statements.append(stmt)
   else:
     logger.warning ("No individual quotas")
@@ -346,13 +352,13 @@ def get_quota_statements (compartmentname:str, parent_compartment:str = None):
 
   # sort out which compartment
   if (parent_compartment != None) and (len(parent_compartment) > 0):
-    compartment = parent_compartment+":"+compartment
+    compartment = parent_compartment+":"+compartmentname
 
   if (QUOTA_CONST.QUOTAS in quota_props):
     for quota_family in quota_props[QUOTA_CONST.QUOTAS]:
       quota_statements = get_quota_statements_for_family(quota_family, quota_statements, compartment)
   else:
-    logger.warning ("No quotas in quota config")
+    logger.warning ("Number of quotas in quota config")
 
   return quota_statements
 ##########
@@ -462,17 +468,21 @@ def create_idcs_user (tenancyid, idcs_name, metadata_url, metadata):
   # https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
   global logging, config_props
   
-  return None
-  iam_client = oci.identity.IdentityClient(config_props)
+  logger.debug ("------------create_idcs_user")
+  #return None
+  client = oci.identity.IdentityClient(config_props)
+  IDCSBaseURL = config_props.get("IDCS_BASE")
+  IDCSBaseURL = strip (IDCSBaseURL)
+  metadata_url = IDCSBaseURL+"/fed/v1/metadata"
 
   idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
   idp.compartment_id = config_props[CONFIG_CONST.TENANCY]
-  idp.name = 'idcs_name'
+  idp.name = 'OracleIdentityCloudService'
   idp.description = 'idcs_description'
-  idp.product_type = 'IDCS'
-  idp.protocol = 'SAML2'
+  idp.product_type = oci.identity.models.CreateSaml2IdentityProviderDetails.PRODUCT_TYPE_IDCS 
+  idp.protocol = oci.identity.models.CreateSaml2IdentityProviderDetails.PROTOCOL_SAML2
   idp.metadata_url = metadata_url # The URL for retrieving the identity provider’s metadata, which contains information required for federating.
-  idp.metadata = metadata
+  #idp.metadata = idp.
   # The XML that contains the information required for federating.
   # load local file?? Isnt this creating rhe federation?
 
@@ -611,8 +621,7 @@ def create_compartment_quota (quota_statements, compartmentid, quotaname):
       request.compartment_id = compartmentid
       request.statements = quota_statements
 
-      logger.info ("Quota to be applied:")
-      logger.info (quota_statements)
+      logger.info ("Number of quota stmts to be applied:" + str(len(quota_statements)))
 
       request.description = app_description
       request.name = quotaname
@@ -646,6 +655,7 @@ def create_compartment_budget(budget_amount, compartmentid, budgetname):
   budget_id = None
   budget_id = find(budgetname, QUOTA_CONST.BUDGET, "pre create budget check")
   if (budget_id == None):
+    logger.info ("create_compartment_budget Budget settings provided for " + budgetname + " amount=" + str(budget_amount) + " description " + app_description)
     try:
       request = oci.budget.models.CreateBudgetDetails()
       request.compartment_id = config_props[CONFIG_CONST.TENANCY]
@@ -660,7 +670,6 @@ def create_compartment_budget(budget_amount, compartmentid, budgetname):
 
       budget_created = oci.budget.BudgetClient.create_budget(client, request)
       budget_id = budget_created.data.id
-      logger.info ("Budget rule: " + budget_id)
       oci.wait_until(client, client.get_budget(budget_id), 'lifecycle_state', 'ACTIVE')    
 
     except oci.exceptions.ServiceError as se:
@@ -847,6 +856,9 @@ if the received override value is provided
   """
 
   global logger, quota_props
+
+  logger.debug ("get_budget_amount provided with " + str(budget_amount_override))
+
   budget_amount = float(0)
   try:
     if (budget_amount_override != None):
@@ -859,12 +871,22 @@ if the received override value is provided
   except ValueError as ve:
     logger.error ("Error converting budget amount to a numeric", ve)
     
-  if (budget_amount == 0) and (quota_props != None):
+  logger.debug ("get_budget_amount - budget_amount currently : " + str(budget_amount))
+  if (budget_amount <= 0) and (quota_props != None):
     budget = None
     if (QUOTA_CONST.BGT_DEF in quota_props):
       budget = quota_props[QUOTA_CONST.BGT_DEF]
       if (QUOTA_CONST.BUDGETAMT in budget):
         budget_amount = budget[QUOTA_CONST.BUDGETAMT]
+        logger.debug ("get_budget_amount - retrieved value of " + str(budget_amount))
+      else:
+        logger.debug ("get_budget_amount - not located in config " + QUOTA_CONST.BUDGETAMT)
+    else:
+      logger.debug ("get_budget_amount - not located in config " + QUOTA_CONST.BGT_DEF)
+
+  if (budget_amount < 0):
+    logger.warning ("Overriding the budget amount to 0, currently " + str(budget_amount))
+    budget_amount = 0
         
   return budget_amount
 ##########
@@ -962,7 +984,11 @@ def terraform_main():
   response = None
   action = ""
 
-  request_json = json.loads(request)
+  try:
+    request_json = json.loads(request)
+  except json.JSONDecodeError as je:
+    logger.error ("Error parsing request, err=" + je.msg)
+
   if (TFM_CONST.ACTION in request_json):
     action = request_json[TFM_CONST.ACTION]
   else:
