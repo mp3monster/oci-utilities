@@ -1,5 +1,5 @@
-{"budget_definition" : {"amount": 10.0, "name":"personal_budget"},
-  "quota_definition":{"quota_name": "personal_quota"},
+{"budget_definition" : {"amount": 10.0, "name":"personal_budget", "alert_message":" Budget threshold has been exceeded", "alert_recipients":"joe@example.com"},
+  "quota_definition":{"name": "personal_quota"},
   "quotas": [
     {
     "description" : "digital assistant",
@@ -132,11 +132,11 @@
   },
   {
     "description" : "Content and Experience",
-    "comment": "We only want share team compartments to have OCE",
-    "deployment_grouping": "individual",
+    "comment": "specified quota familyName `oce` is not a valid service name",
+    "deployment_grouping": "team",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "oce",
-    "quota": [{"quota_name" : "oce-instance-count", "value" : 0, "apply":true}]
+    "quota": [{"quota_name" : "oce-instance-count", "value" : 0, "apply":false}]
   },  
   {
     "description" : "Data Catalog",
@@ -153,7 +153,7 @@
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "dataintegration",
-    "quota": [{"quota_name" : "workspace-count", "value" : 3, "apply":true}]
+    "quota": [{"quota_name" : "workspace-count", "value" : 3, "apply":false}]
   },  
 
   {
@@ -218,13 +218,13 @@
   },  
   {
     "description" : "Database Migration",
-    "comment": "",
+    "comment": "specified quota familyName odms is not a valid service name.",
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "odms",
-    "quota": [{"quota_name" : "odms-migration-count", "value" : 0, "apply":true},
-              {"quota_name" : "odms-registered-database-count", "value" : 0, "apply":true},
-              {"quota_name" : "odms-agent-count", "value" : 0, "apply":true}
+    "quota": [{"quota_name" : "odms-migration-count", "value" : 0, "apply":false},
+              {"quota_name" : "odms-registered-database-count", "value" : 0, "apply":false},
+              {"quota_name" : "odms-agent-count", "value" : 0, "apply":false}
     ]
   }, 
 
@@ -249,11 +249,11 @@
   }, 
   {
     "description" : "Email Delivery",
-    "comment": "",
+    "comment": "Only zero statement accepted in this family",
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "email-delivery",
-    "quota": [{"quota_name" : "approved-sender-count", "value" : 10, "apply":true}]
+    "quota": [{"quota_name" : "approved-sender-count", "value" : 0, "apply":true}]
   }, 
   {
     "description" : "File Storage",
@@ -267,21 +267,21 @@
 
   {
     "description" : "GoldenGate",
-    "comment": "",
+    "comment": "pecified quota familyName goldengate is not a valid service name",
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "goldengate",
-    "quota": [{"quota_name" : "deployment-count", "value" : 0, "apply":true},
+    "quota": [{"quota_name" : "deployment-count", "value" : 0, "apply":false},
       {"quota_name" : "database-registration-count", "value" : 0, "apply":false}
     ]
   }, 
   {
     "description" : "Java Management",
-    "comment": "",
+    "comment": "specified quota familyName `java-management` is not a valid service name",
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "java-management",
-    "quota": [{"quota_name" : "fleet-count", "value" : 10, "apply":true}]
+    "quota": [{"quota_name" : "fleet-count", "value" : 10, "apply":false}]
   },
   {
     "description" : "Load Balancer",
@@ -400,7 +400,7 @@
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "waas",
-    "quota": [{"quota_name" : "waas-policy-count", "value" : 50, "apply":true} ]
+    "quota": [{"quota_name" : "waas-policy-count", "value" : 0, "apply":true} ]
   } 
   ]
 }
