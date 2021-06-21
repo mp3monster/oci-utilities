@@ -27,5 +27,6 @@ setuptools.setup(
     packages=setuptools.find_packages(where=","),
     python_requires=">=3.9",
     install_requires=['oci'],
-    package_data={'sample': ['example-connection.properties'],},
+    package_data={'config': ['example-connection.properties'],
+                            ['logging.properties']},
 )
