@@ -30,8 +30,8 @@ The following tables describe the property file values and the command line opti
 | fingerprint   | This is the finger print generated for the user in IAM / IDCS | bd:........................:0b:e4 |
 | region        | The region that the maybe targets. For logic relating to user and compartment configuration, this is region agnostic. | us-ashburn-1                      |
 |               | *Attributes to setup the new dev user - all prefixed with new_* |                                   |
-| new-groupname |                                                              | PaaSTeam                          |
-| new-username  |                                                              | joe.blogs@example.com             |
+| new-groupname | name of the group that will have the parent compartment      | PaaSTeam                          |
+| new-username  | the new user, this is more easily defined using the command line parameters | joe.blogs@example.com             |
 |               | *Other useful attributes*                                    |                                   |
 | action_desc   | Any message to be appended to the action description         | run by monster                    |
 |               |                                                              |                                   |
@@ -62,14 +62,14 @@ The following tables describe the property file values and the command line opti
 
 ### Command Line Parameters
 
-| Parameter   | Description | Example Value    |
-| ----------- | ----------- | ---------------- |
-| user        |             |                  |
-| team        |             |                  |
-| budget      |             |                  |
-| config      |             |                  |
-| quotaconfig |             |                  |
-| action_desc |             | "run by monster" |
+| Parameter   | Description                                                  | Example Value        |
+| ----------- | ------------------------------------------------------------ | -------------------- |
+| user        | name of the new user. you can provide this as an email address | joe@example.com      |
+| team        | The name opf the team the user is to be attributed to        | paas                 |
+| budget      | Override of the budget amount in the configuration JSON      | 10000                |
+| config      | location of the configuration file                           |                      |
+| quotaconfig | location of the JSON file to be used. This defaults to the local holder if not specified | ../myOtherConfig.son |
+| action_desc | overrides the config file setting                            | "run by monster"     |
 
 
 
