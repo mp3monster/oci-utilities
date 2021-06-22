@@ -47,7 +47,10 @@ class CONFIG_CONST:
   USER="user"
   APP_DESCRIPTION_PREFIX = "automated setup using Python SDK"
   IDCS_METADATA_FILE="idcs_metadata_file"
+  DEFAULT_IDCS_METADATA_FILE="metadata.xml"
   IDCS_BASE_URL= "idcs_base_url"
+  IDCS_INSTANCE_NAME = "idcs_instance_name"
+  DEFAULT_IDCS_INSTANCE_NAME='OracleIdentityCloudService'
 
 ##########
 class CLI_CONST:
@@ -473,17 +476,20 @@ def create_idcs_user (tenancyid):
   global logger, config_props
   
   logger.debug ("create_idcs_user")
-  #return None
+
   IDCSBaseURL = config_props.get(CONFIG_CONST.IDCS_BASE_URL)
   IDCSMetadata_file = config_props.get(CONFIG_CONST.IDCS_METADATA_FILE)
+  idp_name = config_props.get(CONFIG_CONST.IDCS_INSTANCE_NAME)
   idp_id = None
 
+  if (idp_name == None):
+    idp_name = CONFIG_CONST.DEFAULT_IDCS_INSTANCE_NAME
+
   if (IDCSMetadata_file == None):
-    IDCSMetadata_file="metadata.xml"
+    IDCSMetadata_file=CONFIG_CONST.DEFAULT_IDCS_METADATA_FILE
 
     metafile = open(IDCSMetadata_file, "r")
     meta_data = metafile.read()
-    logger.debug(meta_data)
     metafile.close()
 
     if ((IDCSBaseURL != None) and (meta_data !=None)):
@@ -495,7 +501,7 @@ def create_idcs_user (tenancyid):
 
       idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
       idp.compartment_id = config_props[CONFIG_CONST.TENANCY]
-      idp.name = 'OracleIdentityCloudService'
+      idp.name = idp_name
       idp.description = 'idcs_description'
       idp.product_type = oci.identity.models.CreateSaml2IdentityProviderDetails.PRODUCT_TYPE_IDCS 
       idp.protocol = oci.identity.models.CreateSaml2IdentityProviderDetails.PROTOCOL_SAML2
