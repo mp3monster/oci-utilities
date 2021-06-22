@@ -470,9 +470,18 @@ def create_user (username, compartment_id, email):
 ##########
 
 def create_idcs_user (tenancyid):
-  # https://github.com/oracle/oci-python-sdk/issues/232
-  # https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
-  ####HERE
+  """
+  Constructs the linkage between IAM and IDCS.
+  More information from:
+    -   https://github.com/oracle/oci-python-sdk/issues/232
+    -   https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
+
+  Args:
+      tenancyid ([type]): OCID for the tenancy we need to link together with IDCS
+
+  Returns:
+      []: created OCID
+  """
   global logger, config_props
   
   logger.debug ("create_idcs_user")
@@ -665,13 +674,17 @@ def create_compartment_quota (quota_statements, compartmentid, quotaname):
 
 def create_compartment_budget(budget_amount, compartmentid, budgetname):
   """
-  XXXX
+  This sets the budget for the compartment.
   https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/budget/models/oci.budget.models.UpdateBudgetDetails.html#oci.budget.models.UpdateBudgetDetails
 
+  This checks to see if the budget already exists, if itr does then no further action is taken. This means we can apply the budget to a group
+  and the 1st member of the group will get the budget setup, others can be associated to the same budget name
+  This will wait until the budget has been created and is active
+
   Args:
-  * budget_amount : xx
-  * compartmentid : xx
-  * budgetname : xx
+  * budget_amount : budget ceiling to be applied
+  * compartmentid : OCID for the compartment
+  * budgetname : display name for the budget. The budget
   **Returns**
     The OCID for the budget object
   """ 
@@ -707,16 +720,16 @@ def create_compartment_budget(budget_amount, compartmentid, budgetname):
 
 def create_budget_alert(budgetid, budgetname, budgetalertname, alert_recipients, alert_message):
   """
-  XXXX
+  This establishes the alert details for a named budget
 
   Args:
-  * budgetid : xx~
-  * budgetname : xx
-  * budgetalertname : xx
-  * alert_recipients : xx
-  * alert_message
+  * budgetid : the OCID for the budget the alert will be linked to
+  * budgetname : name of the budget
+  * budgetalertname : name for the budget alert configuration
+  * alert_recipients : comma separated list of email addresses to send the alert to when the budget limit is reached
+  * alert_message : the message to be included in the alert
   **Returns**
-    The OCID for 
+    The OCID for for the alert configuration
   """    
   global logger
 
@@ -763,13 +776,14 @@ def create_budget_alert(budgetid, budgetname, budgetalertname, alert_recipients,
 
 def username_to_oci_compatible_name(username):
   """
-  XXXX
+  To generate a safe username this method can be used and we'll strip out characters that would typically appear in an email
+  which dont help with a username
 
   Args:
-  * username : xx
+  * username : uncleansed username e.g. the user's email address
 
   **Returns**
-    The xx
+    The cleansed username
   """  
   if (username != None):
     username = username.replace(".com", "")
@@ -869,8 +883,8 @@ def set_app_description(arg_elements):
 
 def get_budget_amount (budget_amount_override=None):
   """
-Uses the quota JSON object holding the quota and budget values the standard budget amount is retrieved. This value is only used
-if the received override value is provided
+  Uses the quota JSON object holding the quota and budget values the standard budget amount is retrieved. This value is only used
+  if the received override value is provided
 
   Args:
       budget_amount_override (float or str, optional): Representation of the budget value which will be used to override 
@@ -949,6 +963,9 @@ def get_definition_name (definition_type, override=None):
 ##########
 
 def list_quotas ():
+  """
+  Pulls back the quotas for the tenancy
+  """
   global logger
   
   limits_client = oci.limits.QuotasClient(config_props)
@@ -960,13 +977,22 @@ def list_quotas ():
     )
 
   # Get the data from response
-  print(list_quotas_response.data)
+  logger.debug(list_quotas_response.data)
 
 ##########
 
 
 def delete(compartmentid, username=None, compartmentname=None, groupname=None, policyname=None):
+  """
+  #ToDo: complete documentation
   # https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/api/identity/models/oci.identity.models.BulkDeleteResourcesDetails.html
+  Args:
+      compartmentid ([type]): [description]
+      username ([type], optional): [description]. Defaults to None.
+      compartmentname ([type], optional): [description]. Defaults to None.
+      groupname ([type], optional): [description]. Defaults to None.
+      policyname ([type], optional): [description]. Defaults to None.
+  """
   request = oci.identity.models.BulkDeleteResourcesDetails()
   delete_list = []
 
@@ -994,6 +1020,9 @@ def delete(compartmentid, username=None, compartmentname=None, groupname=None, p
     client.bulk_delete_resources(compartmentid, delete_list)
 
 def init_logger():
+  """
+  initializes the logger using the logger config file or the default value. Any problems and we'll print a message  to console
+  """
   global logger
   log_conf = LOGGER_CONF_DEFAULT
   logging.config.fileConfig(log_conf)
@@ -1003,6 +1032,9 @@ def init_logger():
 ##########
 
 def terraform_main():
+  """
+  main if the code is invoked from Terraform. If invoked it will pull back the quota commands using the config file
+  """
   global logger
   init_logger()
   request = sys.stdin.read()
@@ -1031,10 +1063,10 @@ def terraform_main():
 
 def cli_main(*args):
   """
-  XXXX
+  This is called if the utility has been invoked from the command line. The CLI is the expected norm for running this utility
 
   **Parameters**
-  * args : xx~
+  * args : args from the command line
 
   """  
   global logger
@@ -1126,6 +1158,9 @@ def cli_main(*args):
 
 
   init_quota()
+  """
+  initialise the quota object
+  """
   if (validate_quota):
     validate_quota_config()
     exit(0)
@@ -1230,12 +1265,15 @@ def cli_main(*args):
 
 ##########
 def main():
+  """
+  Invoked either via the console or from Terraform. Depending on the origin of the request will call the correct main function
+  """
     if sys.argv[0] != "addUser.py":
       # we know that this has been a Terraform invoked call
-      print ("Executing TF process")
+      logger.debug ("Executing TF process")
       terraform_main()
     else:
-      print ("Executing CLI")
+      logger.debug ("Executing CLI")
       cli_main(sys.argv[1:])
 
 ##########
