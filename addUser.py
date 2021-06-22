@@ -46,6 +46,8 @@ class CONFIG_CONST:
   TENANCY = "tenancy"
   USER="user"
   APP_DESCRIPTION_PREFIX = "automated setup using Python SDK"
+  IDCS_METADATA_FILE="idcs_metadata_file"
+  IDCS_BASE_URL= "idcs_base_url"
 
 ##########
 class CLI_CONST:
@@ -65,6 +67,7 @@ class CLI_CONST:
   LIST="listquota"
   VALIDATE_QUOTA="validate"
   LOGGING="logconf"
+  IDCS="IDCS"
 ##########
 
 
@@ -463,31 +466,47 @@ def create_user (username, compartment_id, email):
   return user_ocid
 ##########
 
-def create_idcs_user (tenancyid, idcs_name, metadata_url, metadata):
+def create_idcs_user (tenancyid):
   # https://github.com/oracle/oci-python-sdk/issues/232
   # https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
-  global logging, config_props
+  ####HERE
+  global logger, config_props
   
-  logger.debug ("------------create_idcs_user")
+  logger.debug ("create_idcs_user")
   #return None
-  client = oci.identity.IdentityClient(config_props)
-  IDCSBaseURL = config_props.get("IDCS_BASE")
-  IDCSBaseURL = strip (IDCSBaseURL)
-  metadata_url = IDCSBaseURL+"/fed/v1/metadata"
+  IDCSBaseURL = config_props.get(CONFIG_CONST.IDCS_BASE_URL)
+  IDCSMetadata_file = config_props.get(CONFIG_CONST.IDCS_METADATA_FILE)
+  idp_id = None
 
-  idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
-  idp.compartment_id = config_props[CONFIG_CONST.TENANCY]
-  idp.name = 'OracleIdentityCloudService'
-  idp.description = 'idcs_description'
-  idp.product_type = oci.identity.models.CreateSaml2IdentityProviderDetails.PRODUCT_TYPE_IDCS 
-  idp.protocol = oci.identity.models.CreateSaml2IdentityProviderDetails.PROTOCOL_SAML2
-  idp.metadata_url = metadata_url # The URL for retrieving the identity provider’s metadata, which contains information required for federating.
-  #idp.metadata = idp.
-  # The XML that contains the information required for federating.
-  # load local file?? Isnt this creating rhe federation?
+  if (IDCSMetadata_file == None):
+    IDCSMetadata_file="metadata.xml"
 
-  iam_client.create_identity_provider(idp)
-  return idp.data.id
+    metafile = open(IDCSMetadata_file, "r")
+    meta_data = metafile.read()
+    logger.debug(meta_data)
+    metafile.close()
+
+    if ((IDCSBaseURL != None) and (meta_data !=None)):
+      IDCSBaseURL = IDCSBaseURL.strip ()
+      metadata_url = IDCSBaseURL+"/fed/v1/metadata"
+      logger.debug ("create_idcs_user - metadata URL:" + metadata_url)
+
+      client = oci.identity.IdentityClient(config_props)
+
+      idp = oci.identity.models.CreateSaml2IdentityProviderDetails ()
+      idp.compartment_id = config_props[CONFIG_CONST.TENANCY]
+      idp.name = 'OracleIdentityCloudService'
+      idp.description = 'idcs_description'
+      idp.product_type = oci.identity.models.CreateSaml2IdentityProviderDetails.PRODUCT_TYPE_IDCS 
+      idp.protocol = oci.identity.models.CreateSaml2IdentityProviderDetails.PROTOCOL_SAML2
+      idp.metadata_url = metadata_url # The URL for retrieving the identity provider’s metadata, which contains information required for federating.
+      idp.metadata = meta_data
+
+      idp_id = client.create_identity_provider(idp)
+      idp_id = idp_id.data.id
+    else:
+      logger.error ("Base URL is not defined, or metadata not retrieved")
+  return idp_id
 
 ##########
 
@@ -1029,6 +1048,7 @@ def cli_main(*args):
   delete = False
   list_quota=False
   validate_quota=False
+  create_idcs_connection = False
   
   CLIMSG = "CLI set "
 
@@ -1086,11 +1106,16 @@ def cli_main(*args):
     elif (arg_elements[0]==CLI_CONST.LIST):
       if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
         list_quota = True
+    elif (arg_elements[0]==CLI_CONST.IDCS):
+      if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
+        create_idcs_connection = True
+        logger.warning(CLI_CONST.IDCS + "option not fully tested")
 
     elif (arg_elements[0]==CLI_CONST.CONFIG_CLI or arg_elements[0]==CLI_CONST.QUOTA_CONFIG_CLI):
       logger.debug ("processed " + arg + " separately")
     else:
         logger.warning(arg_elements[0] + " Unknown config, original value="+arg)
+
 ##########
 
 
@@ -1192,6 +1217,10 @@ def cli_main(*args):
 
     else:
       logger.warning ("problem with quota props not existing - not quotas or budgets set")
+
+    if (create_idcs_connection):
+      idp_ocid = create_idcs_user ( config_props[CONFIG_CONST.TENANCY])
+      logger.debug ("ocid received = " + str(idp_ocid))
 
 ##########
 def main():
