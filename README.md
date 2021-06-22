@@ -62,21 +62,21 @@ The following tables describe the property file values and the command line opti
 
 ### Command Line Parameters
 
-| Parameter   | Description                                                  | Example Value        |
-| ----------- | ------------------------------------------------------------ | -------------------- |
-| user        | name of the new user. you can provide this as an email address | joe@example.com      |
-| team        | The name opf the team the user is to be attributed to        | paas                 |
-| budget      | Override of the budget amount in the configuration JSON      | 10000                |
-| config      | location of the configuration file                           |                      |
-| quotaconfig | location of the JSON file to be used. This defaults to the local holder if not specified | ../myOtherConfig.son |
-| action_desc | overrides the config file setting                            | "run by monster"     |
+| Parameter   | Description                                                  | Example Value                     |
+| ----------- | ------------------------------------------------------------ | --------------------------------- |
+| user        | name of the new user. you can provide this as an email address | joe@example.com                   |
+| team        | The name of the team the user is to be attributed to         | paas                              |
+| budget      | Override of the budget amount in the configuration JSON      | 10000                             |
+| config      | location of the configuration file                           | ./not_default_filename.properties |
+| quotaconfig | location of the JSON file to be used. This defaults to the local holder if not specified | ../myOtherConfig.son              |
+| action_desc | overrides the config file setting                            | "run by monster"                  |
 
 
 
 ### Example of the command line:
 
 ```shell
-py addUser.py user=phil.wilkins@capgemini.com acctiondesc="run by Phil" team=paas config=connection.properties
+py addUser.py user=joe@example.com acctiondesc="run by Phil" team=paas config=connection.properties
 ```
 
 ## Design / Implementation Approach
