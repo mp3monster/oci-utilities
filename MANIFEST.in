@@ -2,6 +2,7 @@ include pyproject.toml
 
 # Include the README
 include *.md
+include ./images/*.png
 
 # Include the license file
 include LICENSE.txt
@@ -12,3 +13,5 @@ include addUser.py
 
 # Include the sample config file
 include example-connection.properties
+include example-quotas.json
+include logging.properties
