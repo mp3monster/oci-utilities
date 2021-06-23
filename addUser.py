@@ -1253,8 +1253,11 @@ def cli_main(*args):
 
       budget_ocid = create_compartment_budget(budget_amount, compartment_ocid, budgetname)
       logger.info (CREATEDMSG + budgetname + OCID_MSG + tostring(budget_ocid))
-      budgetalert_ocid =  create_budget_alert(budget_ocid, budgetname, budgetalertname, alert_recipients, alert_message)
-      logger.info (CREATEDMSG + budgetalertname + OCID_MSG + tostring(budgetalert_ocid))
+      if (budget_ocid != None):
+        budgetalert_ocid =  create_budget_alert(budget_ocid, budgetname, budgetalertname, alert_recipients, alert_message)
+        logger.info (CREATEDMSG + budgetalertname + OCID_MSG + tostring(budgetalert_ocid))
+      else:
+        logger.warning ("Can't create the budget alert as not got the budget OCID")
 
     else:
       logger.warning ("problem with quota props not existing - not quotas or budgets set")
@@ -1268,14 +1271,15 @@ def main():
   """
   Invoked either via the console or from Terraform. Depending on the origin of the request will call the correct main function
   """
+  #global logger # logger not setup so no point in trying to use it
   if sys.argv[0] != "addUser.py":
     # we know that this has been a Terraform invoked call
-    logger.debug ("Executing TF process")
+    #logger.debug ("Executing TF process")
     terraform_main()
   else:
-    logger.debug ("Executing CLI")
+    #logger.debug ("Executing CLI")
     cli_main(sys.argv[1:])
 
 ##########
 if __name__ == "__main__":
-      main()
+  main()
