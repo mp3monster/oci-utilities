@@ -1268,13 +1268,13 @@ def main():
   """
   Invoked either via the console or from Terraform. Depending on the origin of the request will call the correct main function
   """
-    if sys.argv[0] != "addUser.py":
-      # we know that this has been a Terraform invoked call
-      logger.debug ("Executing TF process")
-      terraform_main()
-    else:
-      logger.debug ("Executing CLI")
-      cli_main(sys.argv[1:])
+  if sys.argv[0] != "addUser.py":
+    # we know that this has been a Terraform invoked call
+    logger.debug ("Executing TF process")
+    terraform_main()
+  else:
+    logger.debug ("Executing CLI")
+    cli_main(sys.argv[1:])
 
 ##########
 if __name__ == "__main__":
