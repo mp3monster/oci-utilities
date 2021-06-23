@@ -1,0 +1,14 @@
+{"policy-sets": [
+    {
+      "policy-set-name" : "user management",
+      "apply" : true,
+      "comment": "An example of the policy configs, showing the substitution possibilities",
+      "deployment_grouping": "team",
+      "policies": [
+        {"policy-expression" : "Allow %group% to manage users in %compartment%", "contains-substitutions" : true, "apply":true},
+        {"policy-expression" : "Allow %group% to manage users in %child_compartment%", "contains-substitutions" : true, "apply":false},
+        {"policy-expression" : "Allow group HelpDesk to manage users in tenancy", "contains-substitutions" : false, "apply":false}
+      ]
+    }
+  ]
+}  
