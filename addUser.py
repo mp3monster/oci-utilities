@@ -42,6 +42,7 @@ class CONFIG_CONST:
   NEW_USER="new-username"
   ACTIONDESCRIPTION="actiondesc"
   EMAIL="email"
+  IDCS_GROUP="idcs_group"
   TEAMNAME="team"
   TENANCY = "tenancy"
   USER="user"
@@ -50,7 +51,7 @@ class CONFIG_CONST:
   DEFAULT_IDCS_METADATA_FILE="metadata.xml"
   IDCS_BASE_URL= "idcs_base_url"
   IDCS_INSTANCE_NAME = "idcs_instance_name"
-  DEFAULT_IDCS_INSTANCE_NAME='OracleIdentityCloudService'
+  DEFAULT_IDCS_INSTANCE_NAME="OracleIdentityCloudService"
 
 ##########
 class CLI_CONST:
@@ -66,6 +67,7 @@ class CLI_CONST:
   ACTIONDESCRIPTION= CONFIG_CONST.ACTIONDESCRIPTION
   USER = "user"
   EMAIL=CONFIG_CONST.EMAIL
+  IDCS_GROUP = CONFIG_CONST.IDCS_GROUP
   TEAMNAME=CONFIG_CONST.TEAMNAME
   LIST="listquota"
   VALIDATE_QUOTA="validate"
@@ -88,6 +90,7 @@ class QRY_CONST:
   QUOTA="quota"
   QRY_TYPE='Structured'
   BUDGET="budget"
+  ID_PROVIDER="id_provider"
 ##########
 
 class TFM_CONST:
@@ -117,6 +120,7 @@ LOGGER_CONF_DEFAULT= "logging.properties"
 
 app_description = CONFIG_CONST.APP_DESCRIPTION_PREFIX
 
+idcs_group = None
 
 
 query_dictionary = {
@@ -125,7 +129,8 @@ query_dictionary = {
   QRY_CONST.GROUP: {QRY_CONST.ALL : "query group resources where inactiveStatus = 0", QRY_CONST.NAMED : "query group resources where displayname = "},
   QRY_CONST.POLICY: {QRY_CONST.ALL : "query policy resources where inactiveStatus = 0", QRY_CONST.NAMED : "query policy resources where displayname = "},
   QRY_CONST.BUDGET: {QRY_CONST.ALL : "query budget resources where inactiveStatus = 0", QRY_CONST.NAMED : "query budget resources where displayname = "},
-  QRY_CONST.QUOTA: {QRY_CONST.ALL : "query quota resources where inactiveStatus = 0", QRY_CONST.NAMED : "query quota resources where displayname = "}
+  QRY_CONST.QUOTA: {QRY_CONST.ALL : "query quota resources where inactiveStatus = 0", QRY_CONST.NAMED : "query quota resources where displayname = "},
+  QRY_CONST.ID_PROVIDER: {QRY_CONST.ALL : "query identityprovider resources where inactiveStatus = 0", QRY_CONST.NAMED : "query identityprovider resources where displayname = "}
 }
 """A dictionary of queries to be used to obtain the OCID(s) for various types of OCI objects being used"""
 ##########
@@ -469,12 +474,52 @@ def create_user (username, compartment_id, email):
   return user_ocid
 ##########
 
-def create_idcs_user (tenancyid):
+
+def link_iam_and_idcs (iam_ocid, iam_group_name, idcs_group_name):
   """
-  Constructs the linkage between IAM and IDCS.
-  More information from:
-    -   https://github.com/oracle/oci-python-sdk/issues/232
-    -   https://medium.com/@madajewski.b/oci-creating-a-new-user-605519963b2d
+  Connect the user's IAM (OCI native) group with a target group in IDCS.
+  The function will locate the IDCS IDP provider OCID using the predefined name
+  The IDCS target group needs to be established using the name provided
+
+  Args:
+      iam_ocid (): the group OCID to link the groups together
+      iam_group_name (str): the name of the native gorup - needed to help provide meaningful logging messages
+      idcs_group_name (str): the IDCS target group to be linked
+
+  Returns:
+      OCID: The id provided for the connection established
+  """
+  global logger, config_props
+
+  result = None
+  logger.info ("link_iam_and_idcs IDCS - IAM Group mapping between " + idcs_group_name + " and " + iam_group_name)
+
+  idp_ocid = find(name=CONFIG_CONST.DEFAULT_IDCS_INSTANCE_NAME, query_type=QRY_CONST.ID_PROVIDER, query_msg="get idp " + 
+                  CONFIG_CONST.DEFAULT_IDCS_INSTANCE_NAME, print_find=False)
+
+  if ((iam_ocid != None) and (idcs_group_name != None) and (idp_ocid != None)):
+    mapping = oci.identity.models.CreateIdpGroupMappingDetails()
+    mapping.group_id = iam_ocid
+    mapping.idp_group_name = idcs_group_name
+    client = oci.identity.IdentityClient(config_props)
+    mapping_id = client.create_idp_group_mapping(mapping, idp_ocid)
+
+    if (mapping_id != None):
+      result = mapping_id.data.id
+      logger.info ("link_iam_and_idcs - Mapping established - ocid " + str(result))
+      logger.debug (mapping_id)
+  else:
+    logger.debug("link_iam_and_idcs - Missing value to complete linkage")
+
+  return result
+
+
+
+##########
+def create_custom_idcs_linkage (tenancyid):
+  """
+  for establishing a custom linkage between an IDCS instance and IAM which isn't the default one
+  created as part of the Tenancy setup
 
   Args:
       tenancyid ([type]): OCID for the tenancy we need to link together with IDCS
@@ -482,9 +527,10 @@ def create_idcs_user (tenancyid):
   Returns:
       []: created OCID
   """
+
   global logger, config_props
   
-  logger.debug ("create_idcs_user")
+  logger.debug ("create_custom_idcs_linkage")
 
   IDCSBaseURL = config_props.get(CONFIG_CONST.IDCS_BASE_URL)
   IDCSMetadata_file = config_props.get(CONFIG_CONST.IDCS_METADATA_FILE)
@@ -520,7 +566,7 @@ def create_idcs_user (tenancyid):
       idp_id = client.create_identity_provider(idp)
       idp_id = idp_id.data.id
     else:
-      logger.error ("Base URL is not defined, or metadata not retrieved")
+      logger.error ("create_custom_idcs_linkage - Base URL is not defined, or metadata not retrieved")
   return idp_id
 
 ##########
@@ -1069,7 +1115,7 @@ def cli_main(*args):
   * args : args from the command line
 
   """  
-  global logger
+  global logger, idcs_group
   init_logger()
   init_cli_filenames()
   init_connection()
@@ -1082,6 +1128,13 @@ def cli_main(*args):
   email_address = config_props.get(CONFIG_CONST.EMAIL)
   quotaname = None
   budgetname = None
+  idcs_group = config_props.get(CONFIG_CONST.IDCS_GROUP)
+
+  if ((idcs_group != None) and (len(idcs_group) > 0) and len(idcs_group.strip() > 0)):
+    idcs_group = idcs_group.strip()
+  else:
+    idcs_group = None
+
 
   delete = False
   list_quota=False
@@ -1123,6 +1176,11 @@ def cli_main(*args):
     elif (arg_elements[0]==CLI_CONST.ACTIONDESCRIPTION):
       set_app_description(arg_elements[1])
       logger.info (CLIMSG+CLI_CONST.ACTIONDESCRIPTION+"  >" + arg_elements[1] + "<")
+
+    elif (arg_elements[0]==CLI_CONST.IDCS_GROUP):
+      group = arg_elements[1]
+      if ((group != None) and (len(group.strip()) > 0)):
+        idcs_group = group.strip()
 
     elif (arg_elements[0]==CLI_CONST.LOGGING):
       log_conf= arg_elements[1]
@@ -1263,8 +1321,13 @@ def cli_main(*args):
       logger.warning ("problem with quota props not existing - not quotas or budgets set")
 
     if (create_idcs_connection):
-      idp_ocid = create_idcs_user ( config_props[CONFIG_CONST.TENANCY])
-      logger.debug ("ocid received = " + str(idp_ocid))
+
+      logger.info ("Assuming connection to default IDCS created with the tenancy")
+      #idp_ocid = create_custom_idcs_linkage ( config_props[CONFIG_CONST.TENANCY])
+      #logger.debug ("ocid received = " + str(idp_ocid))
+
+      if ((idcs_group != None) and (group_ocid != None)):
+        linkage_ocid = link_iam_and_idcs (group_ocid, groupname, idcs_group)
 
 ##########
 def main():
