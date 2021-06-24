@@ -102,6 +102,23 @@ class TFM_CONST:
   CONFIG_FN="configfile" # pass to override the default config file
 ##########
 
+class POLICY_CONST:
+  """
+  Defines the constants related to the policy configuration that used to navigate through the data structure
+  """
+  POLICY_PROP_DEFAULT = "policy-set.json"
+  ## the following are attribute names in the JSON quota definition
+
+  POLICY_SETS="policy-sets"
+  SET_NAME="policy-set-name"
+  POLICY_APPLY="apply"
+  COMMENT="comment"
+  POLICIES="policies"
+  EXPRESSION="policy-expression"
+  CONTAINS_SUBS="contains-substitutions"
+
+  DEPLOYMENT_GRP="deployment_grouping"
+
 
 config_props = None
 """Holds the configuration properties loaded. This configuration needs to 
@@ -111,8 +128,13 @@ quota_props = None
 """Holds the configuration properties that are used to define the quotas 
 to be applied. The quotas properties need to follow a naming convention"""
 
+policy_props = None
+"""TBD"""
+
 config_filename = None
 quota_config_filename = None
+policies_config_filename = None
+
 
 logger : logging.Logger
 LOGGER_CONF_DEFAULT= "logging.properties"
@@ -143,6 +165,7 @@ def init_tf_filenames (request_json):
     config_filename = CONFIG_CONST.CONN_PROP_DEFAULT
   if(quota_config_filename == None):
     quota_config_filename = QUOTA_CONST.QUOTA_PROP_DEFAULT
+
 
   if (request_json != None):
     if (TFM_CONST.CONFIG_FN in request_json):
@@ -296,7 +319,17 @@ def init_quota():
   quota_props = json.load(file)
   file.close()
 
- ##########
+ ###########
+
+def init_policies():
+  global logger, policy_props, policies_config_filename
+
+  msg = "policy file:"+policies_config_filename
+  file = open(policies_config_filename,"r")
+
+  policy_props = json.load(file)
+  file.close()
+
  
 def init_connection():
   """
@@ -512,10 +545,9 @@ def link_iam_and_idcs (iam_ocid, iam_group_name, idcs_group_name):
     logger.debug("link_iam_and_idcs - Missing value to complete linkage")
 
   return result
-
-
-
 ##########
+
+
 def create_custom_idcs_linkage (tenancyid):
   """
   for establishing a custom linkage between an IDCS instance and IAM which isn't the default one
@@ -716,6 +748,79 @@ def create_compartment_quota (quota_statements, compartmentid, quotaname):
 
   return quota_ocid
 ##########
+
+
+def apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy):
+  amended_policy = None
+  if (policy != None): 
+    amended_policy = policy
+    amended_policy = amended_policy.replace ("%compartment%", parent_compartment_name)
+    amended_policy = amended_policy.replace ("%child_compartment%", compartment_name)
+    amended_policy = amended_policy.replace ("%group%", group_name)
+
+  return amended_policy
+##########
+
+def create_policies (compartment_name, parent_compartment_name, group_name):
+  global logger
+  policy_sets = {}
+
+  if ((policy_props != None) and (len(policy_props) > 0)):
+    for policy_set in policy_props[POLICY_CONST.POLICY_SETS]:
+      if policy_set[POLICY_CONST.POLICY_APPLY]:
+        policy_stmts = []
+        for policy_stmt in policy_set[POLICY_CONST.POLICIES]:
+          if policy_stmt[POLICY_CONST.POLICY_APPLY]:
+            logger.debug ("create_policies - processing set " + policy_set[POLICY_CONST.SET_NAME])
+            if policy_stmt[POLICY_CONST.CONTAINS_SUBS]:
+              stmt = apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy_stmt[POLICY_CONST.EXPRESSION])
+              if (stmt != None):
+                stmt = stmt.strip()
+                policy_stmts.append(stmt)
+            else:
+                stmt = policy_stmt[POLICY_CONST.EXPRESSION]
+                stmt = stmt.strip()
+                if (len(stmt) > 0):
+                  policy_stmts.append(stmt)
+                  logger.debug("create_policies - stmt = " + stmt)
+          else:
+            logger.debug ("policy set apply not set for " + policy_set[POLICY_CONST.SET_NAME])
+        if (len(policy_stmts) > 0):
+          policy_sets.add (policy_set[POLICY_CONST.SET_NAME], policy_stmts)
+
+  for policy_set in policy_sets:
+    policyObj = oci.identity.models.Policy()
+
+    existing_policy = find(policy_set[0], query_type=QRY_CONST.POLICY, query_msg="check for existing policy")
+    if (existing_policy != None):
+      client = oci.core.IdentityClient(config_props)
+      policyObj = client.getPolicy(existing_policy)
+      if (policyObj != None):
+        policyObj = policyObj.data
+        policyObj.statements = policy_set[1]
+        policy_result = client.updatePolicy(policyObj)
+        logger.info("Policy " + policy_set[0] + " exists replacing policies" + str(policy_result.data.id))
+      else:
+        logger.error ("Not been able to retrieve " + policy_set[0])
+    else:
+      logger.debug ("new policy " + policy_set[0])
+
+      policyObj.description = "TBD"
+      policyObj.name = policy_set[0]
+      policyObj.statements = policy_set[1]
+
+      compartment_ocid = None
+      if (parent_compartment_name != None):
+        compartment_ocid = find(compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
+      else:
+        compartment_ocid = find(parent_compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
+
+      client = oci.core.IdentityClient(config_props)
+      policy_result = client.create_policies (policyObj)
+      logger.info ("created new policy " + policy_set[0] + " ocid = " + str(policy_result.data.id))
+##########    
+
+
 
 
 def create_compartment_budget(budget_amount, compartmentid, budgetname):
