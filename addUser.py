@@ -73,6 +73,7 @@ class CLI_CONST:
   VALIDATE_QUOTA="validate"
   LOGGING="logconf"
   IDCS="IDCS"
+  GENERAL_POLICIES="gen_policies"
 ##########
 
 
@@ -324,7 +325,15 @@ def init_quota():
 def init_policies():
   global logger, policy_props, policies_config_filename
 
-  msg = "policy file:"+policies_config_filename
+  if (policies_config_filename == None):
+    policies_config_filename = POLICY_CONST.POLICY_PROP_DEFAULT
+    logger.debug ("no defined location so adopting default")
+    
+  msg = "policy file:"+str(policies_config_filename)
+
+  if (logger != None):
+    logger.debug(msg)
+
   file = open(policies_config_filename,"r")
 
   policy_props = json.load(file)
@@ -750,7 +759,7 @@ def create_compartment_quota (quota_statements, compartmentid, quotaname):
 ##########
 
 
-def apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy):
+def apply_policy_substitution (compartment_name :str, parent_compartment_name:str, group_name, policy):
   amended_policy = None
   if (policy != None): 
     amended_policy = policy
@@ -761,17 +770,39 @@ def apply_policy_substitution (compartment_name, parent_compartment_name, group_
   return amended_policy
 ##########
 
+def get_policy_apply_to_ocid (parent_compartment_name=None, compartment_name=None):
+  global config_props
+
+  compartment_id = None
+  if (parent_compartment_name != None):
+    compartment_id = find(compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
+  elif (compartment_name != None):
+    compartment_id = find(parent_compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
+  else:
+    compartment_id = config_props[CONFIG_CONST.TENANCY]
+
+  if (True):
+    logger.debug ("Forcing policy scope to tenancy")
+    compartment_id = config_props[CONFIG_CONST.TENANCY]
+
+  return compartment_id
+##########
+
+
 def create_policies (compartment_name, parent_compartment_name, group_name):
   global logger
   policy_sets = {}
 
+  logger.debug ("create_policies called with :" + str(compartment_name) + "  " + str(parent_compartment_name) + "  " + str(group_name))
   if ((policy_props != None) and (len(policy_props) > 0)):
     for policy_set in policy_props[POLICY_CONST.POLICY_SETS]:
+      logger.debug ("create_policies evaluating set " + policy_set[POLICY_CONST.SET_NAME] + " is enabled - " + str(policy_set[POLICY_CONST.POLICY_APPLY]))
       if policy_set[POLICY_CONST.POLICY_APPLY]:
+        logger.debug ("create_policies processing set " + policy_set[POLICY_CONST.SET_NAME])
         policy_stmts = []
         for policy_stmt in policy_set[POLICY_CONST.POLICIES]:
+          logger.debug ("create_policies - processing stmt " + policy_stmt[POLICY_CONST.EXPRESSION] + " in " + policy_set[POLICY_CONST.SET_NAME] + " allowed to be applied " + str(policy_stmt[POLICY_CONST.POLICY_APPLY]))
           if policy_stmt[POLICY_CONST.POLICY_APPLY]:
-            logger.debug ("create_policies - processing set " + policy_set[POLICY_CONST.SET_NAME])
             if policy_stmt[POLICY_CONST.CONTAINS_SUBS]:
               stmt = apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy_stmt[POLICY_CONST.EXPRESSION])
               if (stmt != None):
@@ -783,42 +814,38 @@ def create_policies (compartment_name, parent_compartment_name, group_name):
                 if (len(stmt) > 0):
                   policy_stmts.append(stmt)
                   logger.debug("create_policies - stmt = " + stmt)
-          else:
-            logger.debug ("policy set apply not set for " + policy_set[POLICY_CONST.SET_NAME])
+
         if (len(policy_stmts) > 0):
-          policy_sets.add (policy_set[POLICY_CONST.SET_NAME], policy_stmts)
+          existing_policy = find(policy_set[POLICY_CONST.SET_NAME], query_type=QRY_CONST.POLICY, query_msg="check for existing policy")
+          client = oci.identity.IdentityClient(config_props)
+          policyObj = oci.identity.models.Policy()
 
-  for policy_set in policy_sets:
-    policyObj = oci.identity.models.Policy()
+          if (existing_policy != None):
+            policyObj = client.get_policy(existing_policy)
+            if (policyObj != None):
+              policyObj = policyObj.data
+              policyObj.statements =policy_stmts
+              try:
+                policy_result = client.update_policy(existing_policy, policyObj)
+                logger.info("Policy " + policy_set[POLICY_CONST.SET_NAME] + " exists replacing policies" + str(policyObj.data.id))
+              except oci.exceptions.ServiceError as se:
+                logger.error (se.message)                
+            else:
+              logger.warning ("Policy couldnt be retrieved to update " + policy_set[POLICY_CONST.SET_NAME])
+          else:
+            policyObj.description = "TBD"
+            policyObj.name =policy_set[POLICY_CONST.SET_NAME]
+            policyObj.statements =policy_stmts
+            policyObj.compartment_id = get_policy_apply_to_ocid (parent_compartment_name, compartment_name)
+            try:
+              logger.debug(policyObj)
+              policy_result = client.create_policy (policyObj)
+              logger.info ("created new policy " + policyObj.name+ " ocid = " + str(policy_result.data.id))
+            except oci.exceptions.ServiceError as se:
+              logger.error (se.message, policyObj)
+  
 
-    existing_policy = find(policy_set[0], query_type=QRY_CONST.POLICY, query_msg="check for existing policy")
-    if (existing_policy != None):
-      client = oci.core.IdentityClient(config_props)
-      policyObj = client.getPolicy(existing_policy)
-      if (policyObj != None):
-        policyObj = policyObj.data
-        policyObj.statements = policy_set[1]
-        policy_result = client.updatePolicy(policyObj)
-        logger.info("Policy " + policy_set[0] + " exists replacing policies" + str(policy_result.data.id))
-      else:
-        logger.error ("Not been able to retrieve " + policy_set[0])
-    else:
-      logger.debug ("new policy " + policy_set[0])
-
-      policyObj.description = "TBD"
-      policyObj.name = policy_set[0]
-      policyObj.statements = policy_set[1]
-
-      compartment_ocid = None
-      if (parent_compartment_name != None):
-        compartment_ocid = find(compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
-      else:
-        compartment_ocid = find(parent_compartment_name, query_type=QRY_CONST.COMPARTMENT, query_msg="get compartment ocid for policies")
-
-      client = oci.core.IdentityClient(config_props)
-      policy_result = client.create_policies (policyObj)
-      logger.info ("created new policy " + policy_set[0] + " ocid = " + str(policy_result.data.id))
-##########    
+  ##########    
 
 
 
@@ -1207,6 +1234,7 @@ def terraform_main():
 
   init_connection()
   init_quota()
+  init_policies()
 
   sys.out.write(response)
   exit(0)
@@ -1245,6 +1273,7 @@ def cli_main(*args):
   list_quota=False
   validate_quota=False
   create_idcs_connection = False
+  create_general_policies = False
   
   CLIMSG = "CLI set "
 
@@ -1311,6 +1340,10 @@ def cli_main(*args):
       if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
         create_idcs_connection = True
         logger.warning(CLI_CONST.IDCS + "option not fully tested")
+    elif (arg_elements[0]==CLI_CONST.GENERAL_POLICIES):
+          if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
+            create_general_policies = True
+          logger.debug("Gener policies config set to " + str(create_general_policies))
 
     elif (arg_elements[0]==CLI_CONST.CONFIG_CLI or arg_elements[0]==CLI_CONST.QUOTA_CONFIG_CLI):
       logger.debug ("processed " + arg + " separately")
@@ -1319,6 +1352,7 @@ def cli_main(*args):
 
 ##########
 
+  init_policies()
 
   init_quota()
   """
@@ -1433,6 +1467,10 @@ def cli_main(*args):
 
       if ((idcs_group != None) and (group_ocid != None)):
         linkage_ocid = link_iam_and_idcs (group_ocid, groupname, idcs_group)
+
+    if (create_general_policies):
+      logger.debug ("About to setup the generic policies")
+      policies_id=create_policies(compartmentname, teamname, groupname)
 
 ##########
 def main():
