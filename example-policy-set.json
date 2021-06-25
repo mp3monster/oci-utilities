@@ -1,14 +1,23 @@
 {"policy-sets": [
     {
-      "policy-set-name" : "user management",
+      "policy-set-name" : "logging_management",
       "apply" : true,
       "comment": "An example of the policy configs, showing the substitution possibilities",
       "deployment_grouping": "team",
       "policies": [
-        {"policy-expression" : "Allow %group% to manage users in %compartment%", "contains-substitutions" : true, "apply":true},
-        {"policy-expression" : "Allow %group% to manage users in %child_compartment%", "contains-substitutions" : true, "apply":false},
-        {"policy-expression" : "Allow group HelpDesk to manage users in tenancy", "contains-substitutions" : false, "apply":false}
+        {"policy-expression" : "Allow group %group% to use logging-family in compartment %compartment%", "contains-substitutions" : true, "apply":true},
+        {"policy-expression" : "Allow any-user to use logging-family in tenancy where compartment != %child_compartment%", "contains-substitutions" : true, "apply":false}
       ]
-    }
+    },
+    {
+      "policy-set-name" : "announcements",
+      "apply" : true,
+      "comment": "An example of the policy configs, showing the substitution possibilities",
+      "deployment_grouping": "team",
+      "policies": [
+        {"policy-expression" : "Allow any-user to read announcements in tenancy", "contains-substitutions" : false, "apply":true},      
+        {"policy-expression" : "Allow group %group% to manage announcements in tenancy where compartment != %child_compartment%", "contains-substitutions" : true, "apply":false}
+      ]
+    }    
   ]
 }  
