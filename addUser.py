@@ -760,6 +760,18 @@ def create_compartment_quota (quota_statements, compartmentid, quotaname):
 
 
 def apply_policy_substitution (compartment_name :str, parent_compartment_name:str, group_name, policy):
+  """
+  performs the value substitutions into the policy statement
+
+  Args:
+      compartment_name (str): compartment name to apply
+      parent_compartment_name (str): parent compartment name
+      group_name ([type]): which group should benefit from the statement
+      policy ([type]): the policy statement to apply the changes to
+
+  Returns:
+      [type]: the policy with the relevant substitutions applied to it
+  """
   amended_policy = None
   if (policy != None): 
     amended_policy = policy
@@ -771,6 +783,16 @@ def apply_policy_substitution (compartment_name :str, parent_compartment_name:st
 ##########
 
 def get_policy_apply_to_ocid (parent_compartment_name=None, compartment_name=None):
+  """
+  determine the OCID to apply the policy to
+
+  Args:
+      parent_compartment_name ([type], optional): [description]. Defaults to None.
+      compartment_name ([type], optional): [description]. Defaults to None.
+
+  Returns:
+      [OCID]: the target OCID to use
+  """
   global config_props
 
   compartment_id = None
@@ -781,12 +803,74 @@ def get_policy_apply_to_ocid (parent_compartment_name=None, compartment_name=Non
   else:
     compartment_id = config_props[CONFIG_CONST.TENANCY]
 
+  # with if true we dont get a lint error
   if (True):
     logger.debug ("Forcing policy scope to tenancy")
     compartment_id = config_props[CONFIG_CONST.TENANCY]
 
   return compartment_id
 ##########
+
+def apply_policies(existing_policy, policy_stmts:list, policy_set_name:str, compartment_id):
+  """
+  part of the building policies process, having retrieved all the information
+  if the policy already exists, if it does then we perform an update
+  otherwise we create a new policy
+
+  Args:
+      existing_policy ([type]): Id if policy already exists 
+      policy_stmts (list): strings prepared that should be applied as pollices
+      policy_set_name (string): the name of the set of policy statements
+      compartment_id (): id of the compartment to apply things to
+  """
+  global logger, config_props
+
+  client = oci.identity.IdentityClient(config_props)
+  policy_obj = oci.identity.models.Policy()
+  policy_obj.statements = policy_stmts
+
+  if (existing_policy != None):
+    existing_policy_obj = client.get_policy(existing_policy)
+    if (existing_policy_obj != None):
+      policy_obj.description = existing_policy_obj.data.description
+      try:
+        policy_result = client.update_policy(existing_policy_obj.data.id, policy_obj)
+        logger.info("Policy " + policy_set_name + " exists replacing policies - " + str(existing_policy_obj.data.id))
+      except oci.exceptions.ServiceError as se:
+        logger.error ("apply_policies - update_policy")
+        logger.error (se.message, policy_obj)
+    else:
+      logger.warning ("Policy couldnt be retrieved to update " + policy_set_name)
+  else:
+    policy_obj.description = "TBD"
+    policy_obj.name =policy_set_name
+    policy_obj.compartment_id = compartment_id
+    try:
+      logger.debug(policy_obj)
+      policy_result = client.create_policy (policy_obj)
+      logger.info ("created new policy " + policy_obj.name+ " ocid = " + str(policy_result.data.id))
+    except oci.exceptions.ServiceError as se:
+      logger.error ("apply_policies - create -- " +  str(se.message), str(policy_obj))
+  ##########    
+
+
+def build_stmt_list (policy_stmt, policy_stmts:list, compartment_name, parent_compartment_name, group_name):
+  global logger
+  if policy_stmt[POLICY_CONST.CONTAINS_SUBS]:
+    stmt = apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy_stmt[POLICY_CONST.EXPRESSION])
+    if (stmt != None):
+      stmt = stmt.strip()
+      policy_stmts.append(stmt)
+  else:
+      stmt = policy_stmt[POLICY_CONST.EXPRESSION]
+      stmt = stmt.strip()
+      if (len(stmt) > 0):
+        policy_stmts.append(stmt)
+        logger.debug("create_policies - stmt = " + stmt)
+
+  return policy_stmts
+  ##########    
+
 
 
 def create_policies (compartment_name, parent_compartment_name, group_name):
@@ -803,48 +887,13 @@ def create_policies (compartment_name, parent_compartment_name, group_name):
         for policy_stmt in policy_set[POLICY_CONST.POLICIES]:
           logger.debug ("create_policies - processing stmt " + policy_stmt[POLICY_CONST.EXPRESSION] + " in " + policy_set[POLICY_CONST.SET_NAME] + " allowed to be applied " + str(policy_stmt[POLICY_CONST.POLICY_APPLY]))
           if policy_stmt[POLICY_CONST.POLICY_APPLY]:
-            if policy_stmt[POLICY_CONST.CONTAINS_SUBS]:
-              stmt = apply_policy_substitution (compartment_name, parent_compartment_name, group_name, policy_stmt[POLICY_CONST.EXPRESSION])
-              if (stmt != None):
-                stmt = stmt.strip()
-                policy_stmts.append(stmt)
-            else:
-                stmt = policy_stmt[POLICY_CONST.EXPRESSION]
-                stmt = stmt.strip()
-                if (len(stmt) > 0):
-                  policy_stmts.append(stmt)
-                  logger.debug("create_policies - stmt = " + stmt)
-
+            policy_stmts = build_stmt_list (policy_stmt, policy_stmts, compartment_name, parent_compartment_name, group_name)
         if (len(policy_stmts) > 0):
-          existing_policy = find(policy_set[POLICY_CONST.SET_NAME], query_type=QRY_CONST.POLICY, query_msg="check for existing policy")
-          client = oci.identity.IdentityClient(config_props)
-          policyObj = oci.identity.models.Policy()
-
-          if (existing_policy != None):
-            policyObj = client.get_policy(existing_policy)
-            if (policyObj != None):
-              policyObj = policyObj.data
-              policyObj.statements =policy_stmts
-              try:
-                policy_result = client.update_policy(existing_policy, policyObj)
-                logger.info("Policy " + policy_set[POLICY_CONST.SET_NAME] + " exists replacing policies" + str(policyObj.data.id))
-              except oci.exceptions.ServiceError as se:
-                logger.error (se.message)                
-            else:
-              logger.warning ("Policy couldnt be retrieved to update " + policy_set[POLICY_CONST.SET_NAME])
-          else:
-            policyObj.description = "TBD"
-            policyObj.name =policy_set[POLICY_CONST.SET_NAME]
-            policyObj.statements =policy_stmts
-            policyObj.compartment_id = get_policy_apply_to_ocid (parent_compartment_name, compartment_name)
-            try:
-              logger.debug(policyObj)
-              policy_result = client.create_policy (policyObj)
-              logger.info ("created new policy " + policyObj.name+ " ocid = " + str(policy_result.data.id))
-            except oci.exceptions.ServiceError as se:
-              logger.error (se.message, policyObj)
-  
-
+          apply_policies(find(policy_set[POLICY_CONST.SET_NAME], query_type=QRY_CONST.POLICY, query_msg="check for existing policy"),
+                        policy_stmts, 
+                        policy_set[POLICY_CONST.SET_NAME], 
+                        get_policy_apply_to_ocid (parent_compartment_name, compartment_name))
+  logger.debug("create_policies - DONE")
   ##########    
 
 
