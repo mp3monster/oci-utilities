@@ -874,6 +874,14 @@ def build_stmt_list (policy_stmt, policy_stmts:list, compartment_name, parent_co
 
 
 def create_policies (compartment_name, parent_compartment_name, group_name):
+  """
+  takes the loaded policy sets from the file and then processes them and applies them to the environment
+
+  Args:
+      compartment_name ([str]): child compartment
+      parent_compartment_name ([str]): parent compartment
+      group_name ([str]): the name of the group to be applied to the policy
+  """
   global logger
   policy_sets = {}
 
