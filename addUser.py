@@ -220,6 +220,12 @@ def validate_quota_config(check_minor_attributes=False):
   """
   global logger, quota_props
 
+  INCOMPLETE = " is incomplete"
+  FAMILY_CNT = ") family count "
+  QUOTA_NO =  " quota no "
+  FMY=" family "
+  # the above are constants for the log messages following
+
   logger.debug("Validating Quota file")
   err_count = 0
   warning_count = 0
@@ -236,20 +242,20 @@ def validate_quota_config(check_minor_attributes=False):
       else:
         family_desc = "--Not Defined--"
       if (QUOTA_CONST.DESC not in quota_family) or (len(quota_family[QUOTA_CONST.DESC]) < 3):
-        logger.warning ("Quota description on " + family_desc + "( family group " + str(family_count) + ") is incomplete")
+        logger.warning ("Quota description on " + family_desc + "( family group " + str(family_count) + INCOMPLETE)
         warning_count+=1
       if (QUOTA_CONST.FAMILY not in quota_family) or (len(quota_family[QUOTA_CONST.FAMILY]) < 3):
-        logger.warning ("Quota Family Name on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+        logger.warning ("Quota Family Name on (" +family_desc+FAMILY_CNT + str(family_count) + INCOMPLETE)
         warning_count+=1
       if (QUOTA_CONST.QUOTA not in quota_family) or (len(quota_family[QUOTA_CONST.QUOTA]) == 0):
-        logger.warning ("No individual quotas set on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+        logger.warning ("No individual quotas set on (" +family_desc+FAMILY_CNT + str(family_count) + INCOMPLETE)
         warning_count+=1
       if (check_minor_attributes):
         if (QUOTA_CONST.DOC_URL not in quota_family) or (len(quota_family[QUOTA_CONST.DOC_URL]) < 9):
-          logger.warning ("Documentation_url on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+          logger.warning ("Documentation_url on (" +family_desc+FAMILY_CNT + str(family_count) + INCOMPLETE)
           minor_warning_count+=1
         if ("comment" not in quota_family) or (len(quota_family["comment"]) < 1):
-          logger.warning ("Documentation_url on (" +family_desc+") family count " + str(family_count) + " is incomplete")
+          logger.warning ("Documentation_url on (" +family_desc+FAMILY_CNT + str(family_count) + INCOMPLETE)
           minor_warning_count+=1
 
       else:
@@ -263,24 +269,24 @@ def validate_quota_config(check_minor_attributes=False):
               warning_count+=1
             else:
               if (len(quota[QUOTA_CONST.QTA_NAME] ) < 3):
-                logger.warning ("Quota name in family " + str(family_count) + " is incomplete")
+                logger.warning ("Quota name in family " + str(family_count) + INCOMPLETE)
                 warning_count+=1                  
             if (QUOTA_CONST.QTA_VALUE not in quota) or (quota[QUOTA_CONST.QTA_VALUE] < 0):  
-              msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+              msg = family_desc+"."+quota_name+ FMY + str(family_count) + QUOTA_NO + str(quota_count)
               logger.warning (msg + " -- value not correct")
               warning_count+=1
             if (QUOTA_CONST.QTA_APPLY not in quota): 
-              msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+              msg = family_desc+"."+quota_name+ FMY + str(family_count) + QUOTA_NO + str(quota_count)
               logger.warning (msg + " -- apply to specified")  
               warning_count+=1
             else:
               if (quota[QUOTA_CONST.QTA_APPLY] == False):  
-                msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count)
+                msg = family_desc+"."+quota_name+ FMY + str(family_count) + QUOTA_NO + str(quota_count)
                 logger.warning (msg + " -- value wont be used")        
                 unused_count+=1               
           
           except Exception as err:
-            msg = family_desc+"."+quota_name+ " family " + str(family_count) + " quota no " + str(quota_count) + " errored"
+            msg = family_desc+"."+quota_name+ FMY + str(family_count) + QUOTA_NO + str(quota_count) + " errored"
             logger.error(msg, err)
             err_count+=1
           quota_count+=1
@@ -289,20 +295,24 @@ def validate_quota_config(check_minor_attributes=False):
     logger.error(err)
     err_count+=1
 
+  TOTAL = "Total of "
+  ERR_FOUND=" errors found"
+  WARN_FOUND =  " warnings found"
+  MINOR_WARN_FOUND =  " minor warnings found"
   if (err_count > 0):
-    logger.warning ("Total of " + str(err_count) + " errors found")
+    logger.warning (TOTAL+ str(err_count) + ERR_FOUND)
   else:
-    logger.info ("Total of " + str(err_count) + " errors found")
+    logger.info (TOTAL + str(err_count) + ERR_FOUND)
   if (warning_count > 0):
-    logger.warning ("Total of " + str(warning_count) + " warnings found")
+    logger.warning (TOTAL + str(warning_count) + WARN_FOUND)
   else:
-    logger.info ("Total of " + str(warning_count) + " warnings found")
+    logger.info (TOTAL + str(warning_count) + WARN_FOUND)
   if (minor_warning_count > 0):
-    logger.warning ("Total of " + str(minor_warning_count) + " minor warnings found")
+    logger.warning (TOTAL + str(minor_warning_count) + MINOR_WARN_FOUND)
   else:
-    logger.info ("Total of " + str(minor_warning_count) + " minor warnings found")
+    logger.info (TOTAL + str(minor_warning_count) + MINOR_WARN_FOUND)
 
-  logger.info ("Total of " + str(unused_count) + " individual quotes not to be used")
+  logger.info (TOTAL + str(unused_count) + " individual quotes not to be used")
 
 ##########         
 
@@ -313,8 +323,9 @@ def init_quota():
   """
   global logger, quota_props, quota_config_filename
 
-  msg = "Quota file:"+quota_config_filename
-  #logger.debug(msg)
+  if (logger != None):
+    logger.debug("Quota file:"+quota_config_filename)
+
   file = open(quota_config_filename,"r")
 
   quota_props = json.load(file)
@@ -525,7 +536,7 @@ def link_iam_and_idcs (iam_ocid, iam_group_name, idcs_group_name):
 
   Args:
       iam_ocid (): the group OCID to link the groups together
-      iam_group_name (str): the name of the native gorup - needed to help provide meaningful logging messages
+      iam_group_name (str): the name of the native group - needed to help provide meaningful logging messages
       idcs_group_name (str): the IDCS target group to be linked
 
   Returns:
@@ -557,13 +568,13 @@ def link_iam_and_idcs (iam_ocid, iam_group_name, idcs_group_name):
 ##########
 
 
-def create_custom_idcs_linkage (tenancyid):
+def create_custom_idcs_linkage (tenancy_id):
   """
   for establishing a custom linkage between an IDCS instance and IAM which isn't the default one
   created as part of the Tenancy setup
 
   Args:
-      tenancyid ([type]): OCID for the tenancy we need to link together with IDCS
+      tenancy_id ([type]): OCID for the tenancy we need to link together with IDCS
 
   Returns:
       []: created OCID
@@ -573,24 +584,24 @@ def create_custom_idcs_linkage (tenancyid):
   
   logger.debug ("create_custom_idcs_linkage")
 
-  IDCSBaseURL = config_props.get(CONFIG_CONST.IDCS_BASE_URL)
-  IDCSMetadata_file = config_props.get(CONFIG_CONST.IDCS_METADATA_FILE)
+  idcs_base_url = config_props.get(CONFIG_CONST.IDCS_BASE_URL)
+  idcs_metadata_file = config_props.get(CONFIG_CONST.IDCS_METADATA_FILE)
   idp_name = config_props.get(CONFIG_CONST.IDCS_INSTANCE_NAME)
   idp_id = None
 
   if (idp_name == None):
     idp_name = CONFIG_CONST.DEFAULT_IDCS_INSTANCE_NAME
 
-  if (IDCSMetadata_file == None):
-    IDCSMetadata_file=CONFIG_CONST.DEFAULT_IDCS_METADATA_FILE
+  if (idcs_metadata_file == None):
+    idcs_metadata_file=CONFIG_CONST.DEFAULT_IDCS_METADATA_FILE
 
-    metafile = open(IDCSMetadata_file, "r")
+    metafile = open(idcs_metadata_file, "r")
     meta_data = metafile.read()
     metafile.close()
 
-    if ((IDCSBaseURL != None) and (meta_data !=None)):
-      IDCSBaseURL = IDCSBaseURL.strip ()
-      metadata_url = IDCSBaseURL+"/fed/v1/metadata"
+    if ((idcs_base_url != None) and (meta_data !=None)):
+      idcs_base_url = idcs_base_url.strip ()
+      metadata_url = idcs_base_url+"/fed/v1/metadata"
       logger.debug ("create_idcs_user - metadata URL:" + metadata_url)
 
       client = oci.identity.IdentityClient(config_props)
@@ -640,7 +651,6 @@ def create_compartment (parent_compartment_id, compartmentname):
     logger.info ("Compartment Id:" + compartment_id)
 
     logger.info ("waiting on compartment state")
-    #client = oci.core.IdentityClient(config_props)
     oci.wait_until(identity, identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE')    
    
   except oci.exceptions.ServiceError as se:
@@ -803,7 +813,7 @@ def get_policy_apply_to_ocid (parent_compartment_name=None, compartment_name=Non
   else:
     compartment_id = config_props[CONFIG_CONST.TENANCY]
 
-  # with if true we dont get a lint error
+  # with if true we don't get a lint error
   if (True):
     logger.debug ("Forcing policy scope to tenancy")
     compartment_id = config_props[CONFIG_CONST.TENANCY]
@@ -840,7 +850,7 @@ def apply_policies(existing_policy, policy_stmts:list, policy_set_name:str, comp
         logger.error ("apply_policies - update_policy")
         logger.error (se.message, policy_obj)
     else:
-      logger.warning ("Policy couldnt be retrieved to update " + policy_set_name)
+      logger.warning ("Policy could not be retrieved to update " + policy_set_name)
   else:
     policy_obj.description = "TBD"
     policy_obj.name =policy_set_name
@@ -883,7 +893,6 @@ def create_policies (compartment_name, parent_compartment_name, group_name):
       group_name ([str]): the name of the group to be applied to the policy
   """
   global logger
-  policy_sets = {}
 
   logger.debug ("create_policies called with :" + str(compartment_name) + "  " + str(parent_compartment_name) + "  " + str(group_name))
   if ((policy_props != None) and (len(policy_props) > 0)):
@@ -1012,7 +1021,7 @@ def create_budget_alert(budgetid, budgetname, budgetalertname, alert_recipients,
 def username_to_oci_compatible_name(username):
   """
   To generate a safe username this method can be used and we'll strip out characters that would typically appear in an email
-  which dont help with a username
+  which don't help with a username
 
   Args:
   * username : uncleansed username e.g. the user's email address
@@ -1183,13 +1192,13 @@ def get_definition_name (definition_type, override=None):
     if (override != None)and (isinstance(override, str)):
       budget_amount_override = budget_amount_override.strip()
       if (len(budget_amount_override) > 0):
-        budget_amount = float(budget_amount_override)
+        float(budget_amount_override) # perform the cast to ensure the string is legitimate
 
   except ValueError as ve:
     logger.error ("Error converting budget amount to a numeric", ve)
     
-  if (name == "") and (quota_props != None):
-    if (definition_type in quota_props):
+  if (((name == "") and (quota_props != None)) and 
+      (definition_type in quota_props)):
       container = quota_props[definition_type]
       if (QUOTA_CONST.NAME in container):
         name = container[QUOTA_CONST.NAME]
@@ -1207,8 +1216,7 @@ def list_quotas ():
 
   list_quotas_response = limits_client.list_quotas(
     compartment_id=config_props[CONFIG_CONST.TENANCY],
-    limit=1000,
-    #lifecycle_state="ACTIVE"
+    limit=1000   #lifecycle_state="ACTIVE"
     )
 
   # Get the data from response
@@ -1332,7 +1340,7 @@ def cli_main(*args):
   create_idcs_connection = False
   create_general_policies = False
   
-  CLIMSG = "CLI set "
+  CLI_MSG = "CLI set "
 
   if CONFIG_CONST.ACTIONDESCRIPTION in config_props:
       set_app_description([CONFIG_CONST.ACTIONDESCRIPTION, config_props[CONFIG_CONST.ACTIONDESCRIPTION]])
@@ -1342,11 +1350,11 @@ def cli_main(*args):
 
     if (arg_elements[0]==CLI_CONST.USER):
       username = arg_elements[1]
-      logger.info (CLIMSG+CLI_CONST.USER+"  >" + username + "<")    
+      logger.info (CLI_MSG+CLI_CONST.USER+"  >" + username + "<")    
 
     elif (arg_elements[0]==CLI_CONST.TEAMNAME):
       teamname= arg_elements[1]
-      logger.info (CLIMSG+CLI_CONST.TEAMNAME+"  >" + teamname + "<")    
+      logger.info (CLI_MSG+CLI_CONST.TEAMNAME+"  >" + teamname + "<")    
 
     elif (arg_elements[0]==CLI_CONST.EMAIL):
       email_address=  arg_elements[1]
@@ -1354,19 +1362,19 @@ def cli_main(*args):
       if (len(email_address) < 3):
           email_address = config_props(CONFIG_CONST.EMAIL)
           logger.warn("CLI setting for " + CONFIG_CONST.EMAIL + " ignored, value too short")
-      logger.info (CLIMSG+CLI_CONST.EMAIL+"  >" + email_address + "<")    
+      logger.info (CLI_MSG+CLI_CONST.EMAIL+"  >" + email_address + "<")    
 
     elif (arg_elements[0]==QUOTA_CONST.BUDGET):
       budgetname = arg_elements[1]
-      logger.info (CLIMSG+QUOTA_CONST.BUDGET+"  >" + arg_elements[1] + "<")      
+      logger.info (CLI_MSG+QUOTA_CONST.BUDGET+"  >" + arg_elements[1] + "<")      
 
     elif (arg_elements[0]==QUOTA_CONST.BUDGETAMT):
       budget_amount = get_budget_amount(arg_elements[1])
-      logger.info (CLIMSG+QUOTA_CONST.BUDGETAMT+"  >" + budget_amount + "<")
+      logger.info (CLI_MSG+QUOTA_CONST.BUDGETAMT+"  >" + budget_amount + "<")
 
     elif (arg_elements[0]==CLI_CONST.ACTIONDESCRIPTION):
       set_app_description(arg_elements[1])
-      logger.info (CLIMSG+CLI_CONST.ACTIONDESCRIPTION+"  >" + arg_elements[1] + "<")
+      logger.info (CLI_MSG+CLI_CONST.ACTIONDESCRIPTION+"  >" + arg_elements[1] + "<")
 
     elif (arg_elements[0]==CLI_CONST.IDCS_GROUP):
       group = arg_elements[1]
@@ -1400,7 +1408,7 @@ def cli_main(*args):
     elif (arg_elements[0]==CLI_CONST.GENERAL_POLICIES):
           if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
             create_general_policies = True
-          logger.debug("Gener policies config set to " + str(create_general_policies))
+          logger.debug("General policies config set to " + str(create_general_policies))
 
     elif (arg_elements[0]==CLI_CONST.CONFIG_CLI or arg_elements[0]==CLI_CONST.QUOTA_CONFIG_CLI):
       logger.debug ("processed " + arg + " separately")
@@ -1463,6 +1471,10 @@ def cli_main(*args):
   logger.info (LOCATEDMSG + groupname + OCID_MSG + tostring(find(groupname, QRY_CONST.GROUP)))
   logger.info (LOCATEDMSG + policyname + OCID_MSG + tostring(find(policyname, QRY_CONST.POLICY)))
 
+  if (delete):
+    logger.debug ("we would be performing a delete now if implemented")
+    #ToDo implement delete operations
+
   if (search_only == False):
 
     parent_compartment_ocid = get_parent_compartment_ocid(teamname)
@@ -1524,23 +1536,21 @@ def cli_main(*args):
 
       if ((idcs_group != None) and (group_ocid != None)):
         linkage_ocid = link_iam_and_idcs (group_ocid, groupname, idcs_group)
+        logger.debug ("linkage ocid = " + str(linkage_ocid))
 
     if (create_general_policies):
       logger.debug ("About to setup the generic policies")
-      policies_id=create_policies(compartmentname, teamname, groupname)
+      create_policies(compartmentname, teamname, groupname)
 
 ##########
 def main():
   """
   Invoked either via the console or from Terraform. Depending on the origin of the request will call the correct main function
   """
-  #global logger # logger not setup so no point in trying to use it
   if sys.argv[0] != "addUser.py":
     # we know that this has been a Terraform invoked call
-    #logger.debug ("Executing TF process")
     terraform_main()
   else:
-    #logger.debug ("Executing CLI")
     cli_main(sys.argv[1:])
 
 ##########
