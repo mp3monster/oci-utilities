@@ -38,26 +38,6 @@ The following tables describe the property file values and the command line opti
 
 
 
-### Quota JSON File
-
-| Property                           | Description                                                  | Example Value                                                |
-| ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| budget_definition                  |                                                              |                                                              |
-| budget_definition.amount           | The budget amount ass float                                  | 10.0                                                         |
-| budget_definition.name             | Name of the budget to use                                    | myBudget                                                     |
-| budget_definition.alert_message    | The text to include in the email sent when a budget limit is exceeded | Show me the money                                            |
-| budget_definition.alert_recipients | The email address(es) to send the alerts to                  | joe@example.com, fred@example.com                            |
-| quotas                             | list of families of quotas                                   |                                                              |
-| quotas.description                 | Meaningful name - typically following the Oracle name        | analytics                                                    |
-| quotas.comment                     | general comments                                             | this is my own comment                                       |
-| quotas.deployment_grouping         | currently not used - potential for separating individual and group setup | individual or team                                           |
-| quotas.documentation_url           | Link to the quota family documentation                       | https://docs.oracle.com/en-us/iaas/digital-assistant/doc/order-service-and-provision-instance.html |
-| quotas.family_name                 | Description of the family - correlates back to Oracle's definition |                                                              |
-| quotas.quota                       | List made up with the following values                       |                                                              |
-| quotas.quota.quota_name            | Oracle defined quota within the family                       | see oracle documentation  e.g. analytics                     |
-| quotas.quota.value                 | The value to set as a quota. Numeric integer                 | 3                                                            |
-| quotas.quota.apply                 | Boolean flag indication whether the quota should be used. Rather than deleting records and not spotting what has been removed we use this to include/e | True or False                                                |
-
 
 
 ### Command Line Parameters
@@ -81,38 +61,36 @@ py addUser.py user=joe@example.com acctiondesc="run by Phil" team=paas config=co
 
 
 
-### Properties for IDCS
+### Quota JSON File
 
-To connect identity management to IDCS several pieces of information are needed - two configuration values and some one off details from the IAM UI, as illustrated in the following diagram.  The file linked by the words Download this document need to be downloaded and referenced in the config file.  You also will need the URL for your IDCS instance. The name of the file will default to  *metadata.xml* and be assumed to be in the local folder.  Likewise the IDCS name will be assumed to be *OracleIdentityCloudService* as shown in the screenshot.
+The information about the construction of the quotas file is in [README-quotas.md]()
 
-![](./images/federation-highlight.png)
+### Policies JSON File
 
-
+The information about the construction of the quotas file is in [README-policies.md]()
 
 ## Design / Implementation Approach
 
-__TBD - to include__
+A lot of the background details to the design and implementation of this tool are available in this Oracle blog (TBD). Covering considerations of ...
 
-- Choose to use Python ...
-- naming convention applied
-- find and continue
-- structured query
+- Why Python and the SDK is used
+- Why this tool has been developed, including the parent child relationship with the compartments - note, that this is __NOT__ enforced.
+- The use of structured queries against the OCI API - __recommended__ reading as this is a very powerful feature.
+- Within the logic we have tried to apply a locate and build upon existing settings in most cases
 
-## Known Issues
+## Improvements & Known Issues
 
-The following lists the currently known issues in the solution:
+Improvements have details included in [README-features.md]() and all issues and improvement ideas are tickets in GitHub
 
-- Currently Quotas appear to only be possible on the first level compartments i.e. the children of the tenancy. Any child compartments (i.e. second level) do not support the idea of compartments.
+## Testing 
 
-- The logic currently doesn't support amending existing compartments, users and related policy constructs.
-
-
+Testing for the changes isn't the easiest of tasks because trying to mock the SDK isn't a trivial exercise. But we have produced unit tests against logic that doesn't involve the SDK and some basic checks for existence of settings in OCI.
 
   ## Useful resources
 
   * https://github.com/pyenv-win/pyenv-win#installation -- the setting up of pyenv to help Python environments
   
-  * https://realpython.com/effective-python-environment/#virtual-environments -- creating a virtual environment separation ontop of what pyenv does
+  * https://realpython.com/effective-python-environment/#virtual-environments -- creating a virtual environment separation on top of what pyenv does
   
   * https://docs.pipenv.org/en/latest/ -- the virtual environment extended version of PIP
   
