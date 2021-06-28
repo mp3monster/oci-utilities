@@ -101,6 +101,7 @@ class TFM_CONST:
   ACTION="action" #identifies a CSV identifying the requested actions to be performed
   QUOTA_CONFIG_FN="quotaconfigfile" # pass to override the default quota file
   CONFIG_FN="configfile" # pass to override the default config file
+  POLICIES_CONFIG_FN="policiesconfigfile"
 ##########
 
 class POLICY_CONST:
@@ -181,7 +182,12 @@ def init_tf_filenames (request_json):
       if (len(fn) > 1):
         quota_config_filename=fn
         logger.debug ("TF data changed quota config file location to " + fn)        
-
+    if (TFM_CONST.POLICIES_CONFIG_FN in request_json):
+      fn = request_json[TFM_CONST.QUOTA_CONFIG_FN]
+      fn.strip()
+      if (len(fn) > 1):
+        policies_config_filename=fn
+        logger.debug ("TF data changed quota config file location to " + fn)   
 ##########
 
 def init_cli_filenames ():
