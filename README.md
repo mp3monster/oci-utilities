@@ -22,19 +22,19 @@ The following tables describe the property file values and the command line opti
 
 ### Connection Properties File
 
-| Property      | Description                                                  | Example Value                     |
-| ------------- | ------------------------------------------------------------ | --------------------------------- |
-| user          | OCID for the user with admin privileges to run the script. As this information is going into a configuration file, we would recommend considering that a separate 'system user' be setup, so if someone accidentally shares/commits the configuration then it is less disruptive to block the user. The downside is you can't directly attribute the execution to an individual.  To address this - there is an an additional parameter called 'action_description' which will append to the description a message e.g. use action_description to the name of the individual. | ocid1.user.oc1..xxxxaaaaabbbbcccc |
-| key_file      |                                                              | my-key-file.pem                   |
-| tenancy       | OCID of the tenancy                                          | ocid1.user.oc1..wwwwwwwxxxxxyyyzz |
-| fingerprint   | This is the finger print generated for the user in IAM / IDCS | bd:........................:0b:e4 |
-| region        | The region that the maybe targets. For logic relating to user and compartment configuration, this is region agnostic. | us-ashburn-1                      |
-|               | *Attributes to setup the new dev user - all prefixed with new_* |                                   |
-| new-groupname | name of the group that will have the parent compartment      | PaaSTeam                          |
-| new-username  | the new user, this is more easily defined using the command line parameters | joe.blogs@example.com             |
-|               | *Other useful attributes*                                    |                                   |
-| action_desc   | Any message to be appended to the action description         | run by monster                    |
-|               |                                                              |                                   |
+| Property           | Description                                                  | Example Value                     |
+| ------------------ | ------------------------------------------------------------ | --------------------------------- |
+| user               | OCID for the user with admin privileges to run the script. As this information is going into a configuration file, we would recommend considering that a separate 'system user' be setup, so if someone accidentally shares/commits the configuration then it is less disruptive to block the user. The downside is you can't directly attribute the execution to an individual.  To address this - there is an an additional parameter called 'action_description' which will append to the description a message e.g. use action_description to the name of the individual. | ocid1.user.oc1..xxxxaaaaabbbbcccc |
+| key_file           |                                                              | my-key-file.pem                   |
+| tenancy            | OCID of the tenancy                                          | ocid1.user.oc1..wwwwwwwxxxxxyyyzz |
+| fingerprint        | This is the finger print generated for the user in IAM / IDCS | bd:........................:0b:e4 |
+| region             | The region that the maybe targets. For logic relating to user and compartment configuration, this is region agnostic. | us-ashburn-1                      |
+|                    | *Attributes to setup the new dev user - all prefixed with new_* |                                   |
+| new-groupname      | name of the group that will have the parent compartment      | PaaSTeam                          |
+| new-username       | the new user, this is more easily defined using the command line parameters | joe.blogs@example.com             |
+|                    | *Other useful attributes*                                    |                                   |
+| action_desc        | Any message to be appended to the action description         | run by monster                    |
+| policiesconfigfile | Defines an alternate config file to the default              |                                   |
 
 
 
@@ -42,14 +42,17 @@ The following tables describe the property file values and the command line opti
 
 ### Command Line Parameters
 
-| Parameter   | Description                                                  | Example Value                     |
-| ----------- | ------------------------------------------------------------ | --------------------------------- |
-| user        | name of the new user. you can provide this as an email address | joe@example.com                   |
-| team        | The name of the team the user is to be attributed to         | paas                              |
-| budget      | Override of the budget amount in the configuration JSON      | 10000                             |
-| config      | location of the configuration file                           | ./not_default_filename.properties |
-| quotaconfig | location of the JSON file to be used. This defaults to the local holder if not specified | ../myOtherConfig.son              |
-| action_desc | overrides the config file setting                            | "run by monster"                  |
+| Parameter    | Description                                                  | Example Value                                                |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| user         | name of the new user. you can provide this as an email address | joe@example.com                                              |
+| team         | The name of the team the user is to be attributed to         | paas                                                         |
+| budget       | Override of the budget amount in the configuration JSON      | 10000                                                        |
+| config       | location of the configuration file                           | ./not_default_filename.properties                            |
+| quotaconfig  | location of the JSON file to be used. This defaults to the local holder if not specified. The default is *policy-set.json* | ../myOtherConfig.son                                         |
+| validate     | This will get the configuration files for quota (and later the policier to validated without actually applying the configuration). Validate will not run onto processing the request. | Accepted values are "y", "t", "true" - any other value is interpreted as false |
+| idcs         | Tells the tool to establish the link between IAM and IDCS (IDP) | Accepted values are "y", "t", "true" - any other value is interpreted as false |
+| action_desc  | overrides the config file setting                            | "run by monster"                                             |
+| gen_policies | This flag will enable the processing of the policies configuration file | Accepted values are "y", "t", "true" - any other value is interpreted as false |
 
 
 
