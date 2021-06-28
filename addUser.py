@@ -118,7 +118,7 @@ class POLICY_CONST:
   EXPRESSION="policy-expression"
   CONTAINS_SUBS="contains-substitutions"
 
-  DEPLOYMENT_GRP="deployment_grouping"
+  DEPLOYMENT_GRP="deployment-grouping"
 
 
 config_props = None

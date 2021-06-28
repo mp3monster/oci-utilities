@@ -3,7 +3,7 @@
       "policy-set-name" : "logging_management",
       "apply" : true,
       "comment": "An example of the policy configs, showing the substitution possibilities",
-      "deployment_grouping": "team",
+      "deployment-grouping": "team",
       "policies": [
         {"policy-expression" : "Allow group %group% to use logging-family in compartment %compartment%", "contains-substitutions" : true, "apply":true},
         {"policy-expression" : "Allow any-user to use logging-family in tenancy where compartment != %child_compartment%", "contains-substitutions" : true, "apply":false}
