@@ -1182,7 +1182,7 @@ def get_budget_amount (budget_amount_override=None):
   return budget_amount
 ##########
 
-def get_definition_name (definition_type, override=None): 
+def get_definition_name (definition_type, budget_amount_override=None): 
   """
   Navigates the definition structure for both budgets and quotas in our JSON structure and retrieves the name value
 
@@ -1197,7 +1197,7 @@ def get_definition_name (definition_type, override=None):
   global logger, quota_props
   name=""
   try:
-    if (override != None)and (isinstance(override, str)):
+    if (budget_amount_override != None)and (isinstance(budget_amount_override, str)):
       budget_amount_override = budget_amount_override.strip()
       if (len(budget_amount_override) > 0):
         float(budget_amount_override) # perform the cast to ensure the string is legitimate
@@ -1271,6 +1271,30 @@ def delete(compartmentid, username=None, compartmentname=None, groupname=None, p
     client.bulk_delete_resources(compartmentid, delete_list)
 ##########
 
+def tidy_list (list_obj):
+    """
+    Goes through the list - any entries containing :
+    - just characters that can separate list, 
+    -  white space 
+    - empty strings
+    are removed
+
+    Args:
+        list_obj (list[str]): list of strings to be cleaned up
+
+    Returns:
+        list[str]: cleansed list
+    """
+    cleaned_res_list = []
+    for res in list_obj:
+        cleaned=res
+        cleaned.replace(",", "") 
+        cleaned = res.strip()
+        if (len(cleaned)>0):
+            cleaned_res_list.append (cleaned)
+
+    return cleaned_res_list
+##########
 
 def listify(list_obj, existing_list:list=None):
   """
