@@ -12,6 +12,6 @@ include setup.py
 include addUser.py 
 
 # Include the sample config file
-include example-connection.properties
+include example-*.properties
 include example-quotas.json
 include logging.properties
