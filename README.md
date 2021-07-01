@@ -35,6 +35,7 @@ The following tables describe the property file values and the command line opti
 |                    | *Other useful attributes*                                    |                                   |
 | action_desc        | Any message to be appended to the action description         | run by monster                    |
 | policiesconfigfile | Defines an alternate config file to the default              |                                   |
+| common_groups      | list of space or comma separated group names that the user should be added to that already exist | testgrp,testgrp2                  |
 
 
 
@@ -53,6 +54,7 @@ The following tables describe the property file values and the command line opti
 | idcs         | Tells the tool to establish the link between IAM and IDCS (IDP) | Accepted values are "y", "t", "true" - any other value is interpreted as false |
 | action_desc  | overrides the config file setting                            | "run by monster"                                             |
 | gen_policies | This flag will enable the processing of the policies configuration file | Accepted values are "y", "t", "true" - any other value is interpreted as false |
+| add-to-grp   | a comma separated list of group names that the user will be added to | testgrp,testgrp2                                             |
 
 
 

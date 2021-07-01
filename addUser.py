@@ -45,6 +45,7 @@ class CONFIG_CONST:
   IDCS_GROUP="idcs_group"
   TEAMNAME="team"
   TENANCY = "tenancy"
+  COMMON_GROUPS="common_groups"
   USER="user"
   APP_DESCRIPTION_PREFIX = "automated setup using Python SDK"
   IDCS_METADATA_FILE="idcs_metadata_file"
@@ -74,6 +75,7 @@ class CLI_CONST:
   LOGGING="logconf"
   IDCS="IDCS"
   GENERAL_POLICIES="gen_policies"
+  ADDTOGRP="add-to-grp"
 ##########
 
 
@@ -1267,6 +1269,92 @@ def delete(compartmentid, username=None, compartmentname=None, groupname=None, p
 
     client = oci.core.IdentityClient(config_props)
     client.bulk_delete_resources(compartmentid, delete_list)
+##########
+
+
+def listify(list_obj, existing_list:list=None):
+  """
+  Take the string representation of actions which will be CSV and create a
+  list that can be easily iterated through
+
+  Args:
+      list_obj (str): comma separated list of actions. If only 1 action then
+      no need to really parse
+
+  Returns:
+      str[]: array (list) of actions
+  """
+  global logger
+
+  result_list=[]
+  if (existing_list!= None):
+    result_list = existing_list
+
+  if (isinstance (list_obj, str)):
+      if ("," in list_obj):
+          logger.debug ("listify - using comma")
+          result_list=list_obj.split(",")
+
+          result_list = tidy_list(result_list)
+
+      elif (" " in list_obj):
+          logger.debug ("listify - using space")
+          result_list=list_obj.split(" ")
+
+          result_list = tidy_list(result_list)
+
+      else:
+          list_obj = list_obj.strip()
+          result_list.append(list_obj)
+
+  elif (isinstance(list_obj, list)):
+      result_list = list_obj
+
+  logger.debug ("Listing elements, total "+str(len(result_list)))
+  for list_element in result_list:
+      logger.debug ("listify element:"+ list_element)
+
+  return result_list
+##########
+
+def add_user_to_existing_groups (group_list: list, user_ocid, username : str):
+  global logger, config_props
+  """
+  The user provided using both the ocid and string name is added to a pre-existing
+  group if the group can be safely identified. If the membership already exists
+  just catch the exception and move on
+  """
+
+  if (user_ocid != None):
+    for grp in group_list:
+      logger.debug ("add_user_to_existing_groups - grp is " + grp)
+      grp_ocid = find(name=grp, query_type=QRY_CONST.GROUP, 
+                      query_msg="add_user_to_existing_groups - find group to add user to", 
+                      print_find = False)
+      if (grp_ocid != None):
+        request = oci.identity.models.AddUserToGroupDetails()
+        request.user_id = user_ocid
+        request.group_id = grp_ocid
+        client = oci.identity.IdentityClient(config_props)
+        mapping_ocid = None
+        try:
+          mapping_ocid = client.add_user_to_group (request)
+        except oci.exceptions.ServiceError as se:
+          if (se.code == 'RelationshipAlreadyExists'):
+            logger.info("Service Already exists - not an issue")
+          else:
+            logger.error (se)
+
+        if (mapping_ocid != None):
+          logger.info ("add_user_to_existing_groups - added user "  +username
+                        + " to group " + grp + " ocid returned " + mapping_ocid.data.id)
+        else:
+          logger.warning ("add_user_to_existing_groups - couldn't add user to group " + grp)
+      else:
+        logger.warning ("add_user_to_existing_groups - Couldn't get ocid for group " + grp)
+  else:
+    logger.warning ("add_user_to_existing_groups - user_ocid not correctly provided")
+##########
 
 def init_logger():
   """
@@ -1345,6 +1433,8 @@ def cli_main(*args):
   validate_quota=False
   create_idcs_connection = False
   create_general_policies = False
+
+  additional_groups = None
   
   CLI_MSG = "CLI set "
 
@@ -1415,6 +1505,10 @@ def cli_main(*args):
           if (arg_elements[1].upper() in CLI_CONST.OPTIONS):
             create_general_policies = True
           logger.debug("General policies config set to " + str(create_general_policies))
+    elif (arg_elements[0]==CLI_CONST.ADDTOGRP):
+          if (len(arg_elements[1]) > 0):
+            additional_groups = arg_elements[1]
+          logger.debug("Add user to additional groups config set to " + str(additional_groups))
 
     elif (arg_elements[0]==CLI_CONST.CONFIG_CLI or arg_elements[0]==CLI_CONST.QUOTA_CONFIG_CLI):
       logger.debug ("processed " + arg + " separately")
@@ -1496,6 +1590,16 @@ def cli_main(*args):
     user_ocid = create_user (username, config_props[CONFIG_CONST.TENANCY], email_address)
     logger.info (username + OCID_MSG + tostring(user_ocid))
 
+    if (user_ocid != None):
+      logger.debug ("adding additional group membership")
+      group_list = []
+      if ((CONFIG_CONST.COMMON_GROUPS in config_props) and 
+        (config_props[CONFIG_CONST.COMMON_GROUPS] != None)):
+        group_list = listify(list_obj=config_props[CONFIG_CONST.COMMON_GROUPS])
+      if (additional_groups != None):
+         group_list = listify(additional_groups, group_list)
+      
+      add_user_to_existing_groups (group_list, user_ocid, username)
 
     policyname_ocid = create_user_compartment_policies (groupname, policyname, compartment_ocid, compartmentname)
     logger.info (policyname + OCID_MSG + tostring(policyname_ocid))
