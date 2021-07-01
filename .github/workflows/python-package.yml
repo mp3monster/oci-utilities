@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: oracle
+    runs-on: oci
     strategy:
       fail-fast: false
       matrix:
