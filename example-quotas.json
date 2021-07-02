@@ -75,7 +75,7 @@
       {"quota_name" : "standard-e2-core-count", "value" : 3, "apply":true},
       {"quota_name" : "standard-e3-core-ad-count", "value" : 0, "apply":true},
       {"quota_name" : "standard-e4-core-count", "value" : 0, "apply":true},
-      {"quota_name" : "standard-a1-core-count", "value" : 24, "apply":true},
+      {"quota_name" : "standard-a1-core-count", "value" : 6, "apply":true},
       {"quota_name" : "dense-io1-core-count", "value" : 0, "apply":true},
       {"quota_name" : "dense-io2-core-count", "value" : 0, "apply":true},
       {"quota_name" : "gpu2-count", "value" : 3, "apply":true},
@@ -271,7 +271,7 @@
     "deployment_grouping": "individual",
     "documentation_url" : "https://docs.oracle.com/en-us/iaas/Content/General/Concepts/resourcequotas.htm",
     "family_name" : "goldengate",
-    "quota": [{"quota_name" : "deployment-count", "value" : 0, "apply":false},
+    "quota": [{"quota_name" : "deployment-count", "value" : 0, "apply":true},
       {"quota_name" : "database-registration-count", "value" : 0, "apply":false}
     ]
   }, 
