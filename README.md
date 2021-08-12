@@ -61,10 +61,10 @@ The following tables describe the property file values and the command line opti
 ### Example of the command line:
 
 ```shell
-py addUser.py user=joe@example.com acctiondesc="run by Phil" team=paas config=connection.properties
+py addUser.py user=joe@example.com actiondesc="run by Phil" team=paas config=connection.properties
 ```
 
-
+Depending upon your environment yoyu may nered to replace py with python or python3.
 
 ### Quota JSON File
 
