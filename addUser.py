@@ -7,6 +7,7 @@ import logging
 import logging.config
 import json
 from datetime import datetime
+import time
 
 
 class QUOTA_CONST:
@@ -662,7 +663,8 @@ def create_compartment (parent_compartment_id, compartmentname):
     logger.info ("Compartment Id:" + compartment_id)
 
     logger.info ("waiting on compartment state")
-    oci.wait_until(identity, identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE', )    
+    #oci.wait_until(identity, identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE', )    
+    time.sleep (30)
    
   except oci.exceptions.ServiceError as se:
     logger.error ("ERROR - Create Compartment: "+compartmentname + " child of " + parent_compartment_id)
@@ -1609,7 +1611,7 @@ def cli_main(*args):
     compartment_ocid = find(compartmentname, QRY_CONST.COMPARTMENT)
     if (compartment_ocid == None):
       compartment_ocid = create_compartment (parent_compartment_ocid, compartmentname)
-    elif (config_props[CONFIG_CONST.TIMESTAMP_COMPARTMENT]):
+    elif ((CONFIG_CONST.TIMESTAMP_COMPARTMENT in config_props) and (config_props[CONFIG_CONST.TIMESTAMP_COMPARTMENT]==True)):
       now = datetime.now()
       datestr = now.strftime("%y-%m-%d--%H-%M")
       compartmentname = compartmentname + "-" + datestr
