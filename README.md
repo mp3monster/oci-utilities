@@ -64,7 +64,7 @@ The following tables describe the property file values and the command line opti
 py addUser.py user=joe@example.com actiondesc="run by Phil" team=paas config=connection.properties
 ```
 
-Depending upon your environment yoyu may nered to replace py with python or python3.
+Depending upon your environment yoyu may nered to replace _py_ with _python_ or _python3_.
 
 ### Quota JSON File
 
@@ -73,6 +73,16 @@ The information about the construction of the quotas file is in [README-quotas.m
 ### Policies JSON File
 
 The information about the construction of the quotas file is in [README-policies.md]()
+
+## Deploying and running in the OCI Shell
+
+The utility can be run on you laptop or desktop, but you may also consider deploying the utility to the OCI Shell. This can be done by either using a GIT clone command :
+
+`git clone https://github.com/mp3monster/oci-utilities.git`
+
+Then the update the configuration files connection.properties, your private key file, quotas and policies. We would recommend that you keep a copy of these in a separate folder so if you re-pull from GitHub then the config isn't overwritten by accident.
+
+We also recommend setting up in ther .bashrc file a couple of alias commands to jump to the right folder and to copy in your connection.properties etc.
 
 ## Design / Implementation Approach
 
@@ -90,6 +100,8 @@ Improvements have details included in [README-features.md]() and all issues and 
 ## Testing 
 
 Testing for the changes isn't the easiest of tasks because trying to mock the SDK isn't a trivial exercise. But we have produced unit tests against logic that doesn't involve the SDK and some basic checks for existence of settings in OCI.
+
+When preparing to test against a live environment then it can take upto 2 hours to delete a compartment, and if the compartment has relationships the delete can take time.  To address this we've added a sneaky option so that the compartment created is extended with a date-time stamp. This is controlled by a property in the properties file called  _UseDTGCompartmentNameIfRequired_ this has to exist and be set to true.
 
   ## Useful resources
 
