@@ -6,6 +6,8 @@ from oci.config import from_file
 import logging
 import logging.config
 import json
+from datetime import datetime
+
 
 class QUOTA_CONST:
   """
@@ -53,6 +55,7 @@ class CONFIG_CONST:
   IDCS_BASE_URL= "idcs_base_url"
   IDCS_INSTANCE_NAME = "idcs_instance_name"
   DEFAULT_IDCS_INSTANCE_NAME="OracleIdentityCloudService"
+  TIMESTAMP_COMPARTMENT="UseDTGCompartmentNameIfRequired"
 
 ##########
 class CLI_CONST:
@@ -140,7 +143,7 @@ quota_config_filename = None
 policies_config_filename = None
 
 
-logger : logging.Logger
+logger : logging.Logger = None
 LOGGER_CONF_DEFAULT= "logging.properties"
 """Python logger used within this module"""
 
@@ -659,7 +662,7 @@ def create_compartment (parent_compartment_id, compartmentname):
     logger.info ("Compartment Id:" + compartment_id)
 
     logger.info ("waiting on compartment state")
-    oci.wait_until(identity, identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE')    
+    oci.wait_until(identity, identity.get_compartment(compartment_id), 'lifecycle_state', 'ACTIVE', )    
    
   except oci.exceptions.ServiceError as se:
     logger.error ("ERROR - Create Compartment: "+compartmentname + " child of " + parent_compartment_id)
@@ -1606,7 +1609,10 @@ def cli_main(*args):
     compartment_ocid = find(compartmentname, QRY_CONST.COMPARTMENT)
     if (compartment_ocid == None):
       compartment_ocid = create_compartment (parent_compartment_ocid, compartmentname)
-
+    elif (config_props[CONFIG_CONST.TIMESTAMP_COMPARTMENT]):
+      now = datetime.now()
+      datestr = now.strftime("%y-%m-%d--%H-%M")
+      compartmentname = compartmentname + "-" + datestr
 
     group_ocid = create_group(groupname)
     logger.info (groupname + OCID_MSG + tostring(group_ocid))
@@ -1639,8 +1645,9 @@ def cli_main(*args):
 
       try:
         alert_message = quota_props[QUOTA_CONST.BGT_DEF][QUOTA_CONST.BUDGETALERTMSG] + " for Compartment:" + compartmentname
-        logger.debug ("Alert message:" + alert_message)
+        logger.debug ("setting Alert message to:" + alert_message)
       except Exception as err:
+        logger.error ("Trapped exception setting alert msg")
         logger.error (err)
         alert_message = "alert"
 
@@ -1648,6 +1655,7 @@ def cli_main(*args):
         alert_recipients = quota_props[QUOTA_CONST.BGT_DEF][QUOTA_CONST.BUDGETALERTRECIPIENTS]
         logger.debug ("Alert recipients:" + alert_recipients)
       except Exception as err:
+        logger.error ("Trapped exception setting recipient")
         logger.error (err)
         alert_recipients = "alert"
 
